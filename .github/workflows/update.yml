@@ -1,0 +1,62 @@
+name: Update data and deploy
+
+# 每日由 FRED 抓官方數據 → 測試及檢查 → 官方數據有新一期才 commit → 部署 GitHub Pages。
+# 公開 repo 的 Actions 分鐘及 Pages 均免費，不佔 RS Terminal 私人 repo 的 Actions 預算，亦不依賴 Mac 開機。
+# 22:20 UTC（香港 06:20）：接住週四美國下午公布的 H.4.1（準備金、TGA、總資產）及前一日殖利率。
+# 13:40 UTC（香港 21:40，平日）：接住美國早上公布的 SOFR、ON RRP 及回購操作。
+# GitHub 排程可能遲到；遲到只會令更新較晚，不影響數據正確。
+on:
+  schedule:
+    - cron: "20 22 * * *"
+    - cron: "40 13 * * 1-5"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["site/**", "scripts/**", "tests/**", ".github/workflows/update.yml"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    # 正常約 1 分鐘；卡死上限 10 分鐘
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test rules
+        run: npm test
+      - name: Fetch FRED data
+        run: node scripts/build-data.mjs
+      - name: Commit when official data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # raw.json 只有官方數據、沒有時間戳：沒有新一期就不 commit，
+          # 但仍然部署，網頁的「最後自動抓取」時間會更新。
+          git add data/raw.json
+          if git diff --cached --quiet; then
+            echo "官方數據沒有新一期，不 commit"
+          else
+            git add site/data/liquidity.json
+            git commit -m "data: FRED update $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
