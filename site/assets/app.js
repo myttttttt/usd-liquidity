@@ -152,7 +152,7 @@ class Chart {
       rows: s.rows.filter((r) => r[s.col ?? 1] != null).map((r) => ({ d: r[0], t: toT(r[0]), v: s.map ? s.map(r) : r[s.col ?? 1] })),
     });
     this.base = cfg.series.map(prep);
-    // 可加入的對比資產；加入後全部改為「由起點計的升跌%」，避免兩條刻度
+    // 可加入的對比資產；每項在主圖下方各佔一格、用自己的刻度，不用雙刻度
     this.extra = (cfg.compare ?? []).map(prep).filter((s) => s.rows.length);
     this.active = new Set();
     this.series = this.base;
@@ -164,7 +164,8 @@ class Chart {
       <div class="seg" role="group" aria-label="時間範圍">${Object.keys(cfg.ranges)
         .map((k) => `<button type="button" data-r="${k}" aria-pressed="${k === this.range}">${k}</button>`).join("")}</div></div>
       ${cmp}
-      <div class="plot"><svg tabindex="0" role="img" aria-label="${esc(cfg.aria)}"></svg></div>`;
+      <div class="plot"><svg tabindex="0" role="img" aria-label="${esc(cfg.aria)}"></svg></div>
+      ${cfg.note ? `<p class="chart-note">${cfg.note}</p>` : ""}`;
     el.querySelectorAll(".cmp button").forEach((b) => b.addEventListener("click", () => {
       const k = b.dataset.k;
       this.active.has(k) ? this.active.delete(k) : this.active.add(k);
@@ -410,6 +411,7 @@ function renderCharts(data) {
       { key: "usd", label: "美元指數", unit: "指數", color: "--c-usd", rows: data.compare.usd, fmt: (v) => v.toFixed(2) },
     ],
     idleHint: "按圖查看每日數值",
+    note: "<b>提醒</b>：資產價格會受流動性影響，但不是線性關係（即不會按比例同升同跌），不宜逐日對照；建議留意大時區（「1年」或「全部」）的方向轉變。",
     yTick: tri,
     fmt: (v) => fmtUsd(v, { unit: false }),
   }));
