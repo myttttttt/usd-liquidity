@@ -25,6 +25,8 @@ const checks = [
   ...(s.compare?.btc ? [["CBBTCUSD", s.compare.btc.date, s.compare.btc.value, 1]] : []),
   ...(s.compare?.eth ? [["CBETHUSD", s.compare.eth.date, s.compare.eth.value, 1]] : []),
   ...(s.compare?.usd ? [["DTWEXBGS", s.compare.usd.date, s.compare.usd.value, 1]] : []),
+  ...(s.compare?.spx ? [["SP500", s.compare.spx.date, s.compare.spx.value, 1]] : []),
+  ...(s.compare?.ndx ? [["NASDAQ100", s.compare.ndx.date, s.compare.ndx.value, 1]] : []),
 ];
 
 let bad = 0;
@@ -35,7 +37,7 @@ for (const [id, date, value, scale] of checks) {
   const rows = parseFredCsv(await res.text(), id);
   const same = rows.find((r) => r[0] === date);
   const fredVal = same ? Math.round(same[1] * scale * 1000) / 1000 : null;
-  const tol = id.startsWith("CB") || id === "DTWEXBGS" ? 0.006 : 1e-6; // 對比資產存兩位小數
+  const tol = id.startsWith("CB") || ["DTWEXBGS", "SP500", "NASDAQ100"].includes(id) ? 0.006 : 1e-6; // 對比資產存兩位小數
   const ok = fredVal != null && Math.abs(fredVal - value) < tol;
   const newer = rows.at(-1)[0] > date ? "（FRED已有較新一期）" : "";
   if (!ok) bad++;

@@ -158,7 +158,7 @@ class Chart {
     this.series = this.base;
     const cmp = this.extra.length
       ? `<div class="cmp" role="group" aria-label="加入對比"><span>對比</span>${this.extra
-          .map((s) => `<button type="button" data-k="${s.key}" aria-pressed="false"><i class="sw${s.dash ? " dash" : ""}" style="--c:var(${s.color})"></i>${esc(s.label)}</button>`).join("")}</div>`
+          .map((s) => `<button type="button" data-k="${s.key}" aria-pressed="false"><i class="sw${s.dash === "dot" ? " dot" : s.dash ? " dash" : ""}" style="--c:var(${s.color})"></i>${esc(s.label)}</button>`).join("")}</div>`
       : "";
     el.innerHTML = `<div class="chart-top"><div class="legend"></div>
       <div class="seg" role="group" aria-label="時間範圍">${Object.keys(cfg.ranges)
@@ -310,7 +310,7 @@ class Chart {
         };
         for (const r of rows) { const k = Math.round(X(r.t)); if (k !== cur) { flush(); cur = k; } pts.push(r); }
         flush();
-        paths += `<path class="series" d="${d}" style="stroke:var(${s.color});stroke-width:${s.width ?? 2}px${s.dash ? ";stroke-dasharray:6 4" : ""}"/>`;
+        paths += `<path class="series" d="${d}" style="stroke:var(${s.color});stroke-width:${s.width ?? 2}px${s.dash === "dot" ? ";stroke-dasharray:0.5 4" : s.dash ? ";stroke-dasharray:6 4" : ""}"/>`;
       }
     });
 
@@ -383,7 +383,7 @@ class Chart {
       const sw = cfg.type === "bar" ? "var(--bar)" : `var(${s.color})`;
       const first = this.vis[i][0];
       const chg = cmp && r && first ? ` <small class="lg-chg">${pctFmt((r.v / first.v - 1) * 100)}</small>` : "";
-      lg += `<span class="lg"><i class="sw${s.dash ? " dash" : ""}" style="--c:${sw}"></i>${esc(s.label)} <b>${r ? (s.fmt ?? cfg.fmt)(r.v) : "—"}</b>${chg}</span>`;
+      lg += `<span class="lg"><i class="sw${s.dash === "dot" ? " dot" : s.dash ? " dash" : ""}" style="--c:${sw}"></i>${esc(s.label)} <b>${r ? (s.fmt ?? cfg.fmt)(r.v) : "—"}</b>${chg}</span>`;
     });
     for (const ref of cfg.refs ?? []) lg += `<span class="lg"><i class="sw dash" style="--c:var(--ref)"></i>${esc(ref.label)}</span>`;
     this.legend.innerHTML = lg;
@@ -404,6 +404,8 @@ function renderCharts(data) {
     compare: [
       { key: "btc", label: "BTC", unit: "美元", color: "--c-btc", rows: data.compare.btc, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
       { key: "gold", label: "黃金", unit: "美元／盎司", color: "--c-gold", rows: data.compare.gold, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
+      { key: "ndx", label: "納指100", unit: "點", color: "--c-ndx", dash: "dot", rows: data.compare.ndx, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
+      { key: "spx", label: "標普500", unit: "點", color: "--c-spx", rows: data.compare.spx, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
       { key: "eth", label: "ETH", unit: "美元", color: "--c-eth", dash: true, rows: data.compare.eth, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
       { key: "usd", label: "美元指數", unit: "指數", color: "--c-usd", rows: data.compare.usd, fmt: (v) => v.toFixed(2) },
     ],
@@ -492,6 +494,8 @@ function renderTables(data) {
   if (c.eth) src.push(["對比：ETH", fred("CBETHUSD"), "Coinbase每日（美元）", c.eth.date, px(c.eth.value)]);
   if (c.gold) src.push(["對比：黃金", bnb, "PAXG代幣每日收市（美元，1枚＝1盎司金）", c.gold.date, px(c.gold.value)]);
   if (c.usd) src.push(["對比：美元指數", fred("DTWEXBGS"), "聯準會廣義美元指數", c.usd.date, px(c.usd.value)]);
+  if (c.spx) src.push(["對比：標普500", fred("SP500"), "每日收市；版權屬S&P Dow Jones Indices LLC", c.spx.date, px(c.spx.value)]);
+  if (c.ndx) src.push(["對比：納指100", fred("NASDAQ100"), "每日收市；版權屬Nasdaq, Inc.", c.ndx.date, px(c.ndx.value)]);
   // 手機上表格可橫向捲動；數值及日期放前面
   $("#table-sources").innerHTML = `<thead><tr><th>指標</th><th class="n">最新數值</th><th>日期</th><th>來源</th><th>口徑</th></tr></thead><tbody>${src
     .map(([n, link, k, dt, v]) => `<tr><td>${n}</td><td class="n">${v}</td><td>${fmtDate(dt)}</td><td>${link}</td><td>${k}</td></tr>`).join("")}</tbody>`;

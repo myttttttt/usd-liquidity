@@ -19,7 +19,7 @@
   --grid: #2c2d2f;
   --ref: #8f8c85;
   --bar: #b7b4ad;
-  --c-btc: #d67523; --c-gold: #4682cc; --c-eth: #bb5faa; --c-usd: #29a077; /* 對比資產，已驗證 */
+  --c-btc: #d67523; --c-gold: #4682cc; --c-eth: #bb5faa; --c-usd: #29a077; --c-spx: #c4464f; --c-ndx: #139cb6; /* 對比資產，已驗證 */
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -40,7 +40,7 @@
   --grid: #e6e0d4;
   --ref: #7d8078;
   --bar: #5c635d;
-  --c-btc: #be5a0a; --c-gold: #2063b0; --c-eth: #a0388f; --c-usd: #008760;
+  --c-btc: #be5a0a; --c-gold: #2063b0; --c-eth: #a0388f; --c-usd: #008760; --c-spx: #ac2f3b; --c-ndx: #0078a2;
   color-scheme: light;
 }
 
@@ -238,3 +238,4 @@ td.n, th.n { text-align: right; }
 .cmp button:not([aria-pressed="true"]) .sw { opacity: 0.45; }
 .sw.dash { background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px); border: 0; height: 3px; }
 .legend .lg-chg { color: var(--text-3); font-size: 11px; }
+.sw.dot { background: repeating-linear-gradient(90deg, var(--c) 0 3px, transparent 3px 6px); border: 0; height: 3px; }

@@ -51,6 +51,8 @@ function synth({ reserves = 2930, tgaDelta = 100, rrp = 0.8, spread = 0, srf = 0
     CBETHUSD: dd((i) => 3000 + i),
     DTWEXBGS: dd(() => 120),
     PAXG: dd(() => 4000),
+    SP500: dd(() => 7000),
+    NASDAQ100: dd(() => 28000),
   };
 }
 

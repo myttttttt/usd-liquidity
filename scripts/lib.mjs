@@ -17,6 +17,9 @@ export const SERIES = {
   CBBTCUSD: { scale: 1, note: "BTC，Coinbase 每日收市（美元）" },
   CBETHUSD: { scale: 1, note: "ETH，Coinbase 每日收市（美元）" },
   DTWEXBGS: { scale: 1, note: "美元指數（聯準會名義廣義美元指數）" },
+  // FRED 標示須版權方預先批准；Michael 2026-09-30 決定照樣加入並在頁面註明版權
+  SP500: { scale: 1, note: "標普500指數（版權屬 S&P Dow Jones Indices LLC）" },
+  NASDAQ100: { scale: 1, note: "納斯達克100指數（版權屬 Nasdaq, Inc.）" },
 };
 
 export function parseFredCsv(text, id) {
@@ -118,6 +121,8 @@ export function buildDataset(raw, generatedAt = new Date().toISOString()) {
       eth: scaled2(raw.CBETHUSD),
       gold: scaled2(raw.PAXG ?? []),
       usd: scaled2(raw.DTWEXBGS),
+      spx: scaled2(raw.SP500),
+      ndx: scaled2(raw.NASDAQ100),
     },
   };
   data.summary = summarize(data);
