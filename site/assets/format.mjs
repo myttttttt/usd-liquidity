@@ -43,49 +43,38 @@ export function fmtDate(d, { year = true } = {}) {
   return (year ? `${y}年` : "") + `${m}月${day}日`;
 }
 
-// 以最新數據生成結論句。規則固定、可重現；不作預測，不給買賣建議。
+// 以最新數據生成結論句（人話版）。規則固定、可重現；不作預測，不給買賣建議。
 export function headline(s) {
-  const { reserves, tga, onrrp, rates, srf } = s;
+  const { reserves, onrrp, rates, srf, netliq } = s;
   const pressure = rates.status === "above" || srf.status === "heavy";
-  const change = (v) => fmtUsd(Math.abs(v));
-
-  let flow;
-  if (tga.chg_w > 0 && reserves.chg_w < 0) {
-    flow = `最新一週TGA增加${change(tga.chg_w)}，準備金同期減少${change(reserves.chg_w)}。`;
-  } else if (tga.chg_w < 0 && reserves.chg_w > 0) {
-    flow = `最新一週TGA減少${change(tga.chg_w)}，準備金同期增加${change(reserves.chg_w)}。`;
-  } else {
-    flow =
-      `最新一週準備金${reserves.chg_w >= 0 ? "增加" : "減少"}${change(reserves.chg_w)}，` +
-      `TGA${tga.chg_w >= 0 ? "增加" : "減少"}${change(tga.chg_w)}。`;
-  }
+  const money =
+    netliq.chg_1m == null
+      ? ""
+      : `市場上的錢（淨流動性）近一個月${netliq.chg_1m >= 0 ? "增加" : "減少"}${fmtUsd(Math.abs(netliq.chg_1m))}。`;
 
   if (pressure) {
     const bits = [];
-    if (rates.status === "above") bits.push(`SOFR近5個交易日平均較IORB高出${fmtBp(rates.avg5_bp, { signed: false })}個基點`);
-    if (srf.status === "heavy") bits.push(`常備回購近5個交易日最多使用${fmtUsd(srf.max5)}`);
-    return { title: "短期資金出現壓力訊號", lede: bits.join("，") + "。" + flow, pressure };
+    if (rates.status === "above") bits.push(`市場借錢利率近5日平均比聯準會利率高${fmtBp(rates.avg5_bp, { signed: false })}個基點`);
+    if (srf.status === "heavy") bits.push(`近5日有機構向聯準會緊急借了${fmtUsd(srf.max5)}`);
+    return { title: "短期借錢出現壓力", lede: bits.join("，") + "。" + money, pressure };
   }
 
   const title =
-    (reserves.below_ref ? "準備金低於3兆美元參考水位" : "準備金仍在3兆美元參考水位之上") +
+    (reserves.below_ref ? "準備金跌穿3兆美元" : "準備金仍高於3兆美元") +
     "，" +
-    (onrrp.cushion_low ? "ON RRP氣墊接近用盡" : "ON RRP仍有緩衝");
-  const calm =
-    rates.status === "at"
-      ? "短期借錢利率已貼近IORB，但暫未見持續壓力。"
-      : "短期借錢利率仍低於IORB，暫未見資金壓力。";
-  return { title, lede: flow + calm, pressure };
+    (onrrp.cushion_low ? "後備資金池幾乎用完" : "後備資金池仍有緩衝");
+  const calm = rates.status === "at" ? "借錢成本貼近警戒位，但暫未見持續壓力。" : "借錢成本正常。";
+  return { title, lede: money + calm, pressure };
 }
 
 export const RATE_STATUS = {
-  below: { label: "資金暢順", tone: "good" },
-  at: { label: "貼近IORB，值得留意", tone: "watch" },
-  above: { label: "壓力浮現", tone: "alert" },
+  below: { label: "正常", tone: "good" },
+  at: { label: "貼近警戒位", tone: "watch" },
+  above: { label: "借錢變貴", tone: "alert" },
 };
 
 export const SRF_STATUS = {
-  none: { label: "幾乎沒有使用", tone: "good" },
+  none: { label: "幾乎無人使用", tone: "good" },
   some: { label: "少量使用", tone: "watch" },
-  heavy: { label: "明顯使用", tone: "alert" },
+  heavy: { label: "大量使用", tone: "alert" },
 };

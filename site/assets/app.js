@@ -28,93 +28,94 @@ function initTheme() {
   sync();
 }
 
-// ---------- 首屏 ----------
+// ---------- 首屏及數字卡 ----------
 function splitUsd(b) {
   const s = fmtUsd(b, { unit: false });
   const m = s.match(/^(.*?)(兆|億)$/);
   return m ? [m[1], m[2] + "美元"] : [s, ""];
 }
 const pctText = (p) => (p < 0.1 ? p.toFixed(2) : p < 10 ? p.toFixed(1) : p.toFixed(0)) + "%";
+const signed = (v) => fmtUsd(v, { signed: true, unit: false });
 
-function kpi({ id, color, name, def, value, chg, note, chip }) {
-  const [n, unit] = splitUsd(value);
-  return `<article class="kpi" data-od-id="kpi-${id}">
-    <h2 class="kpi-name"><i class="sw" style="--c:var(${color})"></i>${name}</h2>
-    <p class="kpi-def">${def}</p>
-    <p class="kpi-val">${n}<small>${unit}</small></p>
-    <p class="kpi-chg"><span>${chg}</span><span>${note}</span></p>
-    <span class="chip ${chip[0]}">${chip[1]}</span>
+// 數字卡：名稱＋數值、一句「怎樣看」、變化＋狀態標籤
+function metric({ id, color, name, sub, value, unit, read, foot, chip }) {
+  return `<article class="metric" data-od-id="m-${id}">
+    <div class="m-top"><h3>${color ? `<i class="sw" style="--c:var(${color})"></i>` : ""}${name}${sub ? `<small>${sub}</small>` : ""}</h3><span class="m-val">${value}<span class="u">${unit}</span></span></div>
+    <p class="read">${read}</p>
+    <div class="m-foot"><span>${foot}</span>${chip ? `<span class="chip ${chip[0]}">${chip[1]}</span>` : ""}</div>
   </article>`;
 }
 
 function renderHero(data) {
   const s = data.summary;
-  $("#asof").textContent = `週數據截至${fmtDate(s.reserves.date)}・日數據截至${fmtDate(s.onrrp.date, { year: false })}`;
-  // 按逗號分句，每句不拆開換行，避免「參考水／位」這類斷字
+  const latest = [s.onrrp.date, s.netliq.date, s.rates.date].sort().at(-1);
+  $("#asof").textContent = `數據更新至${fmtDate(latest)}`;
+  $("#where-sub").textContent = `講座的三條線。準備金及政府戶口為每週平均，最新至${fmtDate(s.reserves.date, { year: false })}。`;
+  // 按逗號分句，每句不拆開換行
   const parts = s.headline.title.split("，");
   $("#headline").innerHTML = parts.map((p, i) => `<span class="clause">${esc(p)}${i < parts.length - 1 ? "，" : ""}</span>`).join("");
   $("#lede").textContent = s.headline.lede;
 
-  const signed = (v) => fmtUsd(v, { signed: true, unit: false });
+  // 淨流動性
+  const n = s.netliq;
+  const [nv, nu] = splitUsd(n.value);
+  $("#nl-value").innerHTML = `${nv}<span class="u">${nu}</span>`;
+  $("#nl-date").textContent = fmtDate(n.date, { year: false });
+  const chg = (label, v) => v == null ? "" :
+    `<span class="chip ${v >= 0 ? "good" : "watch"}">${label} <b>${signed(v)}</b></span>`;
+  $("#nl-chg").innerHTML = chg("近1週", n.chg_1w) + chg("近1個月", n.chg_1m);
+  const u = (v) => `<b>${fmtUsd(v, { unit: false })}</b>`;
+  $("#formula").innerHTML = `聯準會總資產 ${u(n.walcl)}（${fmtDate(n.walcl_date, { year: false })}）− 政府戶口 ${u(n.tga)} − 後備資金池 ${u(n.rrp)}（${fmtDate(n.date, { year: false })}）＝ ${u(n.value)}美元`;
+
+  // 錢去了哪裡
+  const val = (b) => splitUsd(b);
+  const [rv, ru] = val(s.reserves.value), [tv, tu] = val(s.tga.value), [ov, ou] = val(s.onrrp.value);
   $("#kpis").innerHTML = [
-    kpi({
-      id: "reserves", color: "--s1", name: "準備金", def: "銀行在聯準會的結算資金",
-      value: s.reserves.value,
-      chg: `較上週 <b class="num">${signed(s.reserves.chg_w)}</b>`,
-      note: `${fmtDate(s.reserves.date, { year: false })}止一週平均`,
-      chip: s.reserves.below_ref
-        ? ["watch", `低於3兆參考水位 ${signed(s.reserves.gap_ref)}`]
-        : ["good", `高於3兆參考水位 ${signed(s.reserves.gap_ref)}`],
+    metric({
+      id: "reserves", color: "--s1", name: "準備金", sub: "銀行的錢", value: rv, unit: ru,
+      read: "銀行存在聯準會的錢；低於3兆要留意",
+      foot: `較上週 <b>${signed(s.reserves.chg_w)}</b>`,
+      chip: s.reserves.below_ref ? ["watch", "跌穿3兆"] : ["good", "高於3兆"],
     }),
-    kpi({
-      id: "tga", color: "--s2", name: "TGA", def: "財政部在聯準會的現金戶口",
-      value: s.tga.value,
-      chg: `較上週 <b class="num">${signed(s.tga.chg_w)}</b>`,
-      note: `${fmtDate(s.tga.date, { year: false })}止一週平均`,
-      chip: s.tga.chg_w > 0 ? ["watch", "上升中：資金流入政府水缸"] : ["good", "回落中：資金流回市場水缸"],
+    metric({
+      id: "tga", color: "--s2", name: "政府戶口", sub: "TGA", value: tv, unit: tu,
+      read: "上升＝政府從市場抽走錢",
+      foot: `較上週 <b>${signed(s.tga.chg_w)}</b>`,
+      chip: s.tga.chg_w > 0 ? ["watch", "上升中"] : ["good", "回落中"],
     }),
-    kpi({
-      id: "onrrp", color: "--s3", name: "ON RRP", def: "機構隔夜停泊現金的氣墊",
-      value: s.onrrp.value,
-      chg: `高峰 <b class="num">${fmtUsd(s.onrrp.peak, { unit: false })}</b>（${fmtMonth(s.onrrp.peak_date)}）`,
-      note: `${fmtDate(s.onrrp.date, { year: false })}數值`,
-      chip: s.onrrp.cushion_low
-        ? ["watch", `只剩高峰的${pctText(s.onrrp.pct_of_peak)}`]
-        : ["good", `約為高峰的${pctText(s.onrrp.pct_of_peak)}`],
+    metric({
+      id: "onrrp", color: "--s3", name: "後備資金池", sub: "ON RRP", value: ov, unit: ou,
+      read: "越低＝市場緩衝越少",
+      foot: `高峰 <b>${fmtUsd(s.onrrp.peak, { unit: false })}</b>（${fmtMonth(s.onrrp.peak_date)}）`,
+      chip: s.onrrp.cushion_low ? ["watch", `只剩高峰${pctText(s.onrrp.pct_of_peak)}`] : ["good", `約為高峰${pctText(s.onrrp.pct_of_peak)}`],
     }),
   ].join("");
 
+  // 借錢壓力
   const r = s.rates, f = s.srf;
-  const tone = r.status === "above" || f.status === "heavy" ? "alert" : r.status === "at" || f.status === "some" ? "watch" : "good";
-  const overall = { good: "未見壓力", watch: "未見持續壓力，值得留意", alert: "出現壓力訊號" }[tone];
-  $("#pressure-card").innerHTML = `<section class="pressure" data-od-id="pressure-card" aria-label="年末壓力訊號">
-    <div class="pressure-head"><h2>年末壓力訊號</h2><span class="chip ${tone}">${overall}</span></div>
-    <div class="pm">
-      <span class="pm-name">SOFR相對IORB</span><span class="pm-val num">${fmtBp(r.spread_bp)}個基點</span>
-      <span class="pm-def">SOFR ${fmtPct(r.sofr)}（隔夜借美元的市場利率）減IORB ${fmtPct(r.iorb)}（聯準會付給銀行的利率）；近5日平均${fmtBp(r.avg5_bp)}個基點，${RATE_STATUS[r.status].label}</span>
-    </div>
-    <div class="pm">
-      <span class="pm-name">常備回購</span><span class="pm-val num">${fmtUsd(f.value)}</span>
-      <span class="pm-def">聯準會隨時開放的短期借錢窗口；${fmtDate(f.date, { year: false })}數值，近5日最高${fmtUsd(f.max5)}，${SRF_STATUS[f.status].label}</span>
-    </div>
-  </section>`;
-}
+  const [fv, fu] = val(f.value);
+  $("#pressure-metrics").innerHTML = [
+    metric({
+      id: "spread", name: "借錢成本差距", sub: "SOFR − IORB", value: fmtBp(r.spread_bp), unit: "個基點",
+      read: "高於0＝市場借錢比聯準會利率貴",
+      foot: `SOFR <b>${fmtPct(r.sofr)}</b>・IORB <b>${fmtPct(r.iorb)}</b>`,
+      chip: [RATE_STATUS[r.status].tone, RATE_STATUS[r.status].label],
+    }),
+    metric({
+      id: "srf", name: "向聯準會緊急借錢", sub: "常備回購", value: fv, unit: fu,
+      read: "用得多＝市場缺錢",
+      foot: `近5日最多 <b>${fmtUsd(f.max5, { unit: false })}</b>`,
+      chip: [SRF_STATUS[f.status].tone, SRF_STATUS[f.status].label],
+    }),
+  ].join("");
 
-function bindValues(s) {
-  const fmts = { usd: (v) => fmtUsd(v), date: (v) => fmtDate(v), month: fmtMonth };
-  for (const el of document.querySelectorAll("[data-v]")) {
-    const [path, f] = el.dataset.v.split("|");
-    const v = path.split(".").reduce((o, k) => o?.[k], s);
-    if (v != null) el.textContent = fmts[f] ? fmts[f](v) : v;
-  }
-  const n = s.netliq;
-  const u = (v) => fmtUsd(v, { unit: false });
-  $("#formula").innerHTML = `
-    <span>聯準會總資產</span><b>${u(n.walcl)}</b><span class="eq">−</span>
-    <span>TGA</span><b>${u(n.tga)}</b><span class="eq">−</span>
-    <span>ON RRP</span><b>${u(n.rrp_wed)}</b><span class="eq">＝</span>
-    <span class="total"><b>${fmtUsd(n.value)}</b></span>
-    <span>（${fmtDate(n.date, { year: false })}；較上週${fmtUsd(n.chg_w, { signed: true })}）</span>`;
+  // 長期利率
+  const y = s.yields;
+  const bp = (v) => v == null ? "—" : `${fmtBp(v)}個基點`;
+  $("#yield-metrics").innerHTML = [
+    metric({ id: "y10", name: "10年期國債", value: y.y10.toFixed(2), unit: "%", read: "越高＝長期借錢越貴", foot: `近1個月 <b>${bp(y.y10_chg_1m)}</b>` }),
+    metric({ id: "y30", name: "30年期國債", value: y.y30 == null ? "—" : y.y30.toFixed(2), unit: "%", read: "越高＝長期借錢越貴", foot: `近1個月 <b>${bp(y.y30_chg_1m)}</b>` }),
+  ].join("");
 }
 
 // ---------- 圖表 ----------
@@ -182,7 +183,8 @@ class Chart {
     if (cfg.zero || cfg.type === "bar") { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
     const ticks = niceTicks(lo, hi, narrow ? 4 : 5);
     lo = ticks[0]; hi = ticks.at(-1);
-    const labels = ticks.map(cfg.yTick);
+    const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
+    const labels = ticks.map((v) => cfg.yTick(v, step));
     const ml = Math.max(...labels.map((l) => l.length)) * 7 + 10;
     const m = { l: ml, r: 8, t: cfg.marks ? 20 : 8, b: 22 };
     const pw = W - m.l - m.r, ph = H - m.t - m.b;
@@ -197,18 +199,22 @@ class Chart {
     });
     g += `</g>`;
 
-    // X 軸：跨度長用年份，短用月份
+    // X 軸：跨度長用年份，中用月份，短用日期（每週一）
     const span = (tEnd - tStart) / DAY;
     const xt = [];
     const s0 = new Date(tStart), s1 = new Date(tEnd);
     if (span > 500) {
       for (let y = s0.getUTCFullYear() + 1; y <= s1.getUTCFullYear(); y++) xt.push([Date.UTC(y, 0, 1), String(y)]);
-    } else {
+    } else if (span > 120) {
       const step = narrow ? 3 : 2;
       for (let d = new Date(Date.UTC(s0.getUTCFullYear(), s0.getUTCMonth() + 1, 1)); d <= s1; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
         if (d.getUTCMonth() % step !== 0) continue;
         xt.push([d.getTime(), d.getUTCMonth() === 0 ? String(d.getUTCFullYear()) : `${d.getUTCMonth() + 1}月`]);
       }
+    } else {
+      const stepDays = span > 45 ? (narrow ? 21 : 14) : 7;
+      let t = tStart + ((8 - s0.getUTCDay()) % 7) * DAY;
+      for (; t <= tEnd; t += stepDays * DAY) { const d = new Date(t); xt.push([t, `${d.getUTCMonth() + 1}/${d.getUTCDate()}`]); }
     }
     const minGap = 40;
     let lastX = -Infinity, every = 1;
@@ -324,6 +330,8 @@ class Chart {
         layer.innerHTML = h;
       }
     }
+    // 數值已在卡片大字顯示的圖表：未觸碰時只顯示提示，避免重複
+    if (!at && cfg.idleHint) { this.legend.innerHTML = `<span class="lg-hint">${cfg.idleHint}</span>`; return; }
     const dateLabel = at ? fmtDate(at.d) : `最新（${fmtDate(values[0].d, { year: false })}）`;
     let lg = `<span class="lg-date">${dateLabel}</span>`;
     values.forEach((r, i) => {
@@ -338,40 +346,42 @@ class Chart {
 
 function renderCharts(data) {
   const { weekly: w, daily: d } = data;
-  const tri = (v) => `${(v / 1000).toFixed(Math.abs(v) % 1000 === 0 ? 0 : 1)}兆`;
-  const range3 = { "1年": 365, "3年": 1095, "全部": null };
+  // 兆美元刻度：間距越細，小數位越多
+  const tri = (v, step) => `${(v / 1000).toFixed(step >= 1000 ? 0 : step >= 100 ? 1 : 2)}兆`;
+  const long = { "1年": 365, "3年": 1095, "全部": null };
   const peak = data.summary.onrrp;
 
+  charts.push(new Chart($("#chart-net"), {
+    aria: "市場上的錢（淨流動性）每日走勢，單位兆美元",
+    range: "3個月", ranges: { "1個月": 31, "3個月": 92, "1年": 365, "全部": null },
+    series: [{ label: "淨流動性", color: "--accent", rows: d.netliq, col: 4 }],
+    idleHint: "按圖查看每日數值",
+    yTick: tri,
+    fmt: (v) => fmtUsd(v, { unit: false }),
+  }));
+
   charts.push(new Chart($("#chart-three"), {
-    aria: "準備金、TGA及ON RRP走勢圖，單位兆美元",
-    range: "全部", ranges: range3,
+    aria: "準備金、政府戶口及後備資金池走勢，單位兆美元",
+    range: "全部", ranges: long,
     series: [
       { label: "準備金", color: "--s1", rows: w.reserves },
-      { label: "TGA", color: "--s2", rows: w.tga },
-      { label: "ON RRP", color: "--s3", rows: d.onrrp },
+      { label: "政府戶口", color: "--s2", rows: w.tga },
+      { label: "後備資金池", color: "--s3", rows: d.onrrp },
     ],
-    refs: [{ y: 3000, label: "3兆參考水位（非官方紅線）" }],
+    refs: [{ y: 3000, label: "3兆參考水位" }],
     marks: [
-      { d: "2019-09-17", label: "2019年9月回購風波", short: "2019年9月" },
-      { d: peak.peak_date, label: "ON RRP高峰", short: "RRP高峰" },
+      { d: "2019-09-17", label: "2019年9月借錢風波", short: "2019年9月" },
+      { d: peak.peak_date, label: "後備資金池高峰", short: "高峰" },
     ],
     zero: true,
     yTick: tri,
     fmt: (v) => fmtUsd(v, { unit: false }),
   }));
 
-  charts.push(new Chart($("#chart-net"), {
-    aria: "淨流動性代理指標走勢圖，單位兆美元",
-    range: "3年", ranges: range3,
-    series: [{ label: "淨流動性代理指標", color: "--accent", rows: w.netliq, col: 4 }],
-    yTick: tri,
-    fmt: (v) => fmtUsd(v, { unit: false }),
-  }));
-
   charts.push(new Chart($("#chart-spread"), {
     aria: "SOFR減準備金利率的差距，單位個基點",
-    range: "1年", ranges: range3,
-    series: [{ label: "SOFR − IORB", color: "--text", rows: d.rates, map: (r) => Math.round((r[1] - r[2]) * 1000) / 10 }],
+    range: "1年", ranges: long,
+    series: [{ label: "差距", color: "--text", rows: d.rates, map: (r) => Math.round((r[1] - r[2]) * 1000) / 10 }],
     zero: true,
     yTick: (v) => fmtBp(v),
     fmt: (v) => `${fmtBp(v)}個基點`,
@@ -379,21 +389,21 @@ function renderCharts(data) {
 
   charts.push(new Chart($("#chart-srf"), {
     aria: "聯準會隔夜回購操作使用量，單位億美元",
-    range: "1年", ranges: range3, type: "bar",
+    range: "1年", ranges: long, type: "bar",
     series: [{ label: "使用量", color: "--bar", rows: d.srf }],
-    yTick: (v) => `${Math.round(v * 10).toLocaleString("en-US")}億`,
+    yTick: (v, step) => `${(v * 10).toLocaleString("en-US", { maximumFractionDigits: step * 10 >= 1 ? 0 : 2 })}億`,
     fmt: (v) => fmtUsd(v),
   }));
 
   charts.push(new Chart($("#chart-yields"), {
-    aria: "美國10年及30年期國債殖利率走勢圖，單位百分比",
-    range: "1年", ranges: range3,
+    aria: "美國10年及30年期國債殖利率走勢，單位百分比",
+    range: "1年", ranges: long,
     series: [
       { label: "10年期", color: "--s1", rows: d.yields, col: 1 },
       { label: "30年期", color: "--s2", rows: d.yields, col: 2 },
     ],
     refs: [{ y: 5, label: "5%" }],
-    yTick: (v) => `${v.toFixed(v % 1 ? 1 : 0)}%`,
+    yTick: (v, step) => `${v.toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2)}%`,
     fmt: (v) => fmtPct(v),
   }));
 }
@@ -403,26 +413,29 @@ function renderTables(data) {
   const { weekly: w, daily: d, summary: s, meta } = data;
   const u = (v) => fmtUsd(v, { unit: false });
   const rrpAt = (date) => { let v = null; for (const r of d.onrrp) { if (r[0] > date) break; v = r[1]; } return v; };
-  const tga = new Map(w.tga), net = new Map(w.netliq.map((r) => [r[0], r[4]]));
+  const tga = new Map(w.tga);
   const rows = w.reserves.slice(-8).reverse().map(([date, v]) =>
-    `<tr><td>${fmtDate(date)}</td><td class="n">${u(v)}</td><td class="n">${u(tga.get(date))}</td><td class="n">${u(rrpAt(date))}</td><td class="n">${u(net.get(date))}</td></tr>`).join("");
-  $("#table-three").innerHTML = `<thead><tr><th>週三</th><th class="n">準備金（週平均）</th><th class="n">TGA（週平均）</th><th class="n">ON RRP（當日）</th><th class="n">淨流動性代理</th></tr></thead><tbody>${rows}</tbody>`;
+    `<tr><td>${fmtDate(date)}</td><td class="n">${u(v)}</td><td class="n">${u(tga.get(date))}</td><td class="n">${u(rrpAt(date))}</td></tr>`).join("");
+  $("#table-three").innerHTML = `<thead><tr><th>最近8週（週三）</th><th class="n">準備金（週平均）</th><th class="n">政府戶口（週平均）</th><th class="n">後備資金池（當日）</th></tr></thead><tbody>${rows}</tbody>`;
 
-  const fred = (id) => `<a href="https://fred.stlouisfed.org/series/${id}" target="_blank" rel="noopener">${id}</a>`;
+  const fred = (id) => `<a href="https://fred.stlouisfed.org/series/${id}" target="_blank" rel="noopener">FRED ${id}</a>`;
+  const dts = `<a href="https://fiscaldata.treasury.gov/datasets/daily-treasury-statement/" target="_blank" rel="noopener">財政部每日報表</a>`;
   const src = [
-    ["準備金", "WRESBAL", "週平均（截至週三）", s.reserves.date, fmtUsd(s.reserves.value)],
-    ["TGA", "WTREGEN", "週平均（截至週三）", s.tga.date, fmtUsd(s.tga.value)],
-    ["ON RRP", "RRPONTSYD", "每日", s.onrrp.date, fmtUsd(s.onrrp.value)],
-    ["聯準會總資產", "WALCL", "週三水平", s.netliq.date, fmtUsd(s.netliq.walcl)],
-    ["SOFR", "SOFR", "每日", s.rates.date, fmtPct(s.rates.sofr)],
-    ["IORB", "IORB", "每日", s.rates.date, fmtPct(s.rates.iorb)],
-    ["常備回購", "RPONTTLD", "每日", s.srf.date, fmtUsd(s.srf.value)],
-    ["10年期殖利率", "DGS10", "每日", s.yields.date, fmtPct(s.yields.y10)],
-    ["30年期殖利率", "DGS30", "每日", s.yields.date, fmtPct(s.yields.y30)],
+    ["市場上的錢（淨流動性）", "本站計算", "每日", s.netliq.date, fmtUsd(s.netliq.value)],
+    ["準備金", fred("WRESBAL"), "週平均", s.reserves.date, fmtUsd(s.reserves.value)],
+    ["政府戶口（週）", fred("WTREGEN"), "週平均", s.tga.date, fmtUsd(s.tga.value)],
+    ["政府戶口（日）", dts, "每日收市", s.netliq.date, fmtUsd(s.netliq.tga)],
+    ["後備資金池", fred("RRPONTSYD"), "每日", s.onrrp.date, fmtUsd(s.onrrp.value)],
+    ["聯準會總資產", fred("WALCL"), "週三", s.netliq.walcl_date, fmtUsd(s.netliq.walcl)],
+    ["SOFR", fred("SOFR"), "每日", s.rates.date, fmtPct(s.rates.sofr)],
+    ["IORB", fred("IORB"), "每日", s.rates.date, fmtPct(s.rates.iorb)],
+    ["緊急借錢（常備回購）", fred("RPONTTLD"), "每日", s.srf.date, fmtUsd(s.srf.value)],
+    ["10年期國債", fred("DGS10"), "每日", s.yields.date, fmtPct(s.yields.y10)],
+    ["30年期國債", fred("DGS30"), "每日", s.yields.date, fmtPct(s.yields.y30)],
   ];
-  // 手機上表格可橫向捲動；最重要的數值及日期放前面
-  $("#table-sources").innerHTML = `<thead><tr><th>指標</th><th class="n">最新數值</th><th>最新日期</th><th>FRED代號</th><th>口徑</th></tr></thead><tbody>${src
-    .map(([n, id, k, dt, v]) => `<tr><td>${n}</td><td class="n">${v}</td><td>${fmtDate(dt)}</td><td>${fred(id)}</td><td>${k}</td></tr>`).join("")}</tbody>`;
+  // 手機上表格可橫向捲動；數值及日期放前面
+  $("#table-sources").innerHTML = `<thead><tr><th>指標</th><th class="n">最新數值</th><th>日期</th><th>來源</th><th>口徑</th></tr></thead><tbody>${src
+    .map(([n, link, k, dt, v]) => `<tr><td>${n}</td><td class="n">${v}</td><td>${fmtDate(dt)}</td><td>${link}</td><td>${k}</td></tr>`).join("")}</tbody>`;
 
   $("#checked-at").textContent = `最後自動抓取：${hkTime(meta.generated_at)}（香港時間）`;
 }
@@ -456,7 +469,6 @@ async function main() {
     return;
   }
   renderHero(data);
-  bindValues(data.summary);
   renderCharts(data);
   renderTables(data);
   renderStale(data);

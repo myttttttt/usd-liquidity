@@ -4,7 +4,7 @@
 // 預設讀本機 site/data/liquidity.json；上線後可傳入正式網址。
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { parseFredCsv } from "./lib.mjs";
+import { parseFredCsv, parseTreasuryTga } from "./lib.mjs";
 
 const target = process.argv[2] ?? fileURLToPath(new URL("../site/data/liquidity.json", import.meta.url));
 const data = /^https?:/.test(target)
@@ -16,7 +16,7 @@ const checks = [
   ["WRESBAL", s.reserves.date, s.reserves.value, 1e-3],
   ["WTREGEN", s.tga.date, s.tga.value, 1e-3],
   ["RRPONTSYD", s.onrrp.date, s.onrrp.value, 1],
-  ["WALCL", s.netliq.date, s.netliq.walcl, 1e-3],
+  ["WALCL", s.netliq.walcl_date, s.netliq.walcl, 1e-3],
   ["SOFR", s.rates.date, s.rates.sofr, 1],
   ["IORB", s.rates.date, s.rates.iorb, 1],
   ["RPONTTLD", s.srf.date, s.srf.value, 1],
@@ -37,5 +37,18 @@ for (const [id, date, value, scale] of checks) {
   if (!ok) bad++;
   console.log(`${id.padEnd(11)} ${date}  ${String(value).padEnd(14)}  ${String(fredVal).padEnd(14)}  ${rows.at(-1)[0]}    ${ok ? "一致" : "不一致"}${newer}`);
 }
-console.log(bad ? `\n❌ ${bad} 項不一致` : "\n✅ 全部與 FRED 同日數值一致");
+// 每日政府戶口：與美國財政部每日報表同日收市結餘核對
+{
+  const url = `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/operating_cash_balance?filter=record_date:eq:${s.netliq.date}&fields=record_date,account_type,open_today_bal,close_today_bal`;
+  const rows = parseTreasuryTga((await (await fetch(url)).json()).data);
+  const v = rows[0] ? Math.round(rows[0][1]) / 1000 : null;
+  const ok = v != null && Math.abs(v - s.netliq.tga) < 1e-6;
+  if (!ok) bad++;
+  console.log(`${"TGA_DTS".padEnd(11)} ${s.netliq.date}  ${String(s.netliq.tga).padEnd(14)}  ${String(v).padEnd(14)}  (財政部)      ${ok ? "一致" : "不一致"}`);
+  const calc = Math.round((s.netliq.walcl - s.netliq.tga - s.netliq.rrp) * 1000) / 1000;
+  const ok2 = Math.abs(calc - s.netliq.value) < 1e-6;
+  if (!ok2) bad++;
+  console.log(`淨流動性 ${s.netliq.value} ＝ ${s.netliq.walcl} − ${s.netliq.tga} − ${s.netliq.rrp}：${ok2 ? "算式一致" : "算式不一致"}`);
+}
+console.log(bad ? `\n❌ ${bad} 項不一致` : "\n✅ 全部與官方同日數值一致");
 process.exit(bad ? 1 : 0);

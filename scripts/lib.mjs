@@ -32,6 +32,23 @@ export function parseFredCsv(text, id) {
   return out;
 }
 
+// 美國財政部每日報表（Daily Treasury Statement）的 TGA 收市結餘，單位百萬美元。
+// 格式改過兩次：2021-10-01 前叫 Federal Reserve Account（close_today_bal）；
+// 其後叫 Treasury General Account (TGA)（close_today_bal）；2022 年 4 月起
+// 改為 "Treasury General Account (TGA) Closing Balance"，數值放在 open_today_bal。
+export function parseTreasuryTga(rows) {
+  const out = [];
+  for (const r of rows) {
+    let v = null;
+    if (r.account_type === "Federal Reserve Account" || r.account_type === "Treasury General Account (TGA)") v = r.close_today_bal;
+    else if (r.account_type === "Treasury General Account (TGA) Closing Balance") v = r.open_today_bal;
+    const n = Number(v);
+    if (v != null && v !== "null" && Number.isFinite(n) && /^\d{4}-\d{2}-\d{2}$/.test(r.record_date)) out.push([r.record_date, n]);
+  }
+  out.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  return out.filter((r, i) => i === 0 || r[0] !== out[i - 1][0]);
+}
+
 const round = (v, p = 3) => (v == null ? null : Math.round(v * 10 ** p) / 10 ** p);
 const scaled = (rows, k) => rows.map(([d, v]) => [d, round(v * k)]);
 
@@ -55,14 +72,15 @@ export function buildDataset(raw, generatedAt = new Date().toISOString()) {
   const onrrp = b("RRPONTSYD");
   const srf = b("RPONTTLD");
 
-  // 淨流動性代理指標＝總資產（WALCL，週三水平）－TGA（WTREGEN，截至該週三的週平均，與卡片同一口徑）
-  // －ON RRP（RRPONTSYD，該週三或之前最近一個工作天）。市場常用寫法，只作方向參考。
+  // 淨流動性代理指標（每日）＝總資產（WALCL，每週三更新，平日之間沿用最近一次）
+  // －TGA（財政部每日報表收市結餘）－ON RRP（RRPONTSYD 當日）。市場常用寫法，只作方向參考。
+  const tgaDaily = scaled(raw.TGA_DTS, 1e-3);
   const netliq = [];
-  for (const [d, assets] of walcl) {
-    const t = valueAsOf(tga, d, 0);
-    const r = valueAsOf(onrrp, d, 6);
-    if (t == null || r == null) continue;
-    netliq.push([d, assets, t, r, round(assets - t - r)]);
+  for (const [d, t] of tgaDaily) {
+    const a = valueAsOf(walcl, d, 7);
+    const r = valueAsOf(onrrp, d, 4);
+    if (a == null || r == null) continue;
+    netliq.push([d, a, t, r, round(a - t - r)]);
   }
 
   // SOFR 對照準備金利率：2021-07-29 前用 IOER，之後用 IORB
@@ -82,11 +100,13 @@ export function buildDataset(raw, generatedAt = new Date().toISOString()) {
       generated_at: generatedAt,
       start: raw.WRESBAL[0]?.[0],
       units: "金額單位：十億美元；利率單位：%",
-      source: "Federal Reserve Bank of St. Louis, FRED；原始數據來自聯準會 H.4.1、H.15 及紐約聯儲",
+      source: "Federal Reserve Bank of St. Louis, FRED（聯準會 H.4.1、H.15、紐約聯儲）；U.S. Treasury, Daily Treasury Statement",
       stale: [],
+      // 最新一日淨流動性所用的總資產日期（總資產每週三才更新）
+      walcl_date: walcl.filter(([d]) => d <= (netliq.at(-1)?.[0] ?? "")).at(-1)?.[0] ?? null,
     },
-    weekly: { reserves, tga, netliq },
-    daily: { onrrp, rates, srf, yields },
+    weekly: { reserves, tga },
+    daily: { netliq, onrrp, rates, srf, yields },
   };
   data.summary = summarize(data);
   return data;
@@ -94,8 +114,8 @@ export function buildDataset(raw, generatedAt = new Date().toISOString()) {
 
 const last = (rows, back = 0) => rows[rows.length - 1 - back];
 
-export function summarize({ weekly, daily }) {
-  const R = weekly.reserves, T = weekly.tga, N = weekly.netliq;
+export function summarize({ weekly, daily, meta = {} }) {
+  const R = weekly.reserves, T = weekly.tga;
   const reserves = {
     date: last(R)[0],
     value: last(R)[1],
@@ -125,14 +145,19 @@ export function summarize({ weekly, daily }) {
     cushion_low: last(O)[1] < RULES.onrrpLow,
   };
 
+  const N = daily.netliq;
+  const nd = last(N)[0];
+  const back = (days) => valueAsOf(N.map((r) => [r[0], r[4]]), new Date(Date.parse(nd) - days * 864e5).toISOString().slice(0, 10));
+  const w1 = back(7), m1 = back(30);
   const netliq = {
-    date: last(N)[0],
+    date: nd,
     value: last(N)[4],
     walcl: last(N)[1],
+    walcl_date: meta.walcl_date ?? null,
     tga: last(N)[2],
-    rrp_wed: last(N)[3],
-    chg_w: round(last(N)[4] - last(N, 1)[4]),
-    chg_4w: round(last(N)[4] - last(N, 4)[4]),
+    rrp: last(N)[3],
+    chg_1w: w1 == null ? null : round(last(N)[4] - w1),
+    chg_1m: m1 == null ? null : round(last(N)[4] - m1),
   };
 
   const Q = daily.rates;
@@ -193,7 +218,7 @@ export function validate(data) {
   };
   checkRows("準備金", data.weekly.reserves, 500, 8000);
   checkRows("TGA", data.weekly.tga, 0, 3000);
-  checkRows("淨流動性", data.weekly.netliq, 1000, 12000, 4);
+  checkRows("淨流動性", data.daily.netliq, 1000, 12000, 4);
   checkRows("ON RRP", data.daily.onrrp, 0, 3500);
   checkRows("SOFR", data.daily.rates, -1, 12);
   checkRows("常備回購", data.daily.srf, 0, 1000);

@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>美元水管｜準備金、TGA、ON RRP 每日觀察</title>
-<meta name="description" content="每日自動更新的美元流動性觀察：銀行準備金、財政部TGA、ON RRP、淨流動性代理指標及年末資金壓力訊號。數據來自FRED官方序列。屬情境觀察，不構成投資建議。">
+<title>美元水管｜市場上的錢每日觀察</title>
+<meta name="description" content="每日自動更新的美元流動性觀察：淨流動性、銀行準備金、政府戶口TGA、後備資金池ON RRP及借錢壓力。數據來自聯準會及美國財政部。屬情境觀察，不構成投資建議。">
 <meta property="og:type" content="website">
-<meta property="og:title" content="美元水管｜準備金、TGA、ON RRP 每日觀察">
-<meta property="og:description" content="用官方數據追蹤美元流動性三條線及年末資金壓力訊號，每日自動更新。">
+<meta property="og:title" content="美元水管｜市場上的錢每日觀察">
+<meta property="og:description" content="用官方數據看美元流動性：市場上的錢多了還是少了，每日自動更新。">
 <meta property="og:url" content="https://myttttttt.github.io/usd-liquidity/">
 <meta name="theme-color" content="#171819">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -44,128 +44,123 @@
   <main>
     <section class="hero" id="summary" data-od-id="summary" aria-live="polite">
       <p class="eyebrow" id="asof">載入最新數據中…</p>
-      <h1 id="headline">美元流動性三條線</h1>
+      <h1 id="headline">美元流動性每日觀察</h1>
       <p class="lede" id="lede"></p>
-      <div class="kpis" id="kpis"></div>
-      <div id="pressure-card"></div>
-      <p class="hero-note">情境觀察，不構成投資建議。數據來自FRED官方序列，每日自動更新。</p>
-      <noscript><p class="lede">此頁需要啟用JavaScript才能顯示數據。原始數據可在 <a href="https://fred.stlouisfed.org/series/WRESBAL">FRED</a> 查閱。</p></noscript>
+
+      <article class="netliq" data-od-id="netliq">
+        <div class="nl-head">
+          <div class="nl-title">
+            <h2>市場上的錢<span>淨流動性</span></h2>
+            <p class="read">越高＝市場上可用的錢越多</p>
+          </div>
+          <div class="nl-val"><b id="nl-value">—</b><small id="nl-date"></small></div>
+        </div>
+        <div class="nl-chg" id="nl-chg"></div>
+        <div class="chart bare" id="chart-net" data-od-id="chart-net"></div>
+        <details class="more">
+          <summary>怎樣計算？</summary>
+          <div class="more-body">
+            <p class="formula" id="formula"></p>
+            <p>這是市場常用的方向指標，看升跌比看絕對數字有用；它不是會計恆等式，也不等於隨時可以買資產的現金。聯準會總資產每週三才更新，平日之間沿用最近一次數字；政府戶口用美國財政部每日報表。</p>
+          </div>
+        </details>
+      </article>
+      <p class="hero-note">情境觀察，不構成投資建議。</p>
+      <noscript><p class="lede">此頁需要啟用JavaScript才能顯示數據。</p></noscript>
     </section>
 
-    <section class="block" id="three-lines" data-od-id="three-lines">
+    <section class="block" id="where" data-od-id="where">
       <div class="block-head">
-        <h2>三條線：錢放在哪一個水缸</h2>
-        <p>三條線用同一刻度（兆美元）。ON RRP由<span data-v="onrrp.peak_date|month">2022年12月</span>約<span data-v="onrrp.peak|usd">2.55兆美元</span>的高峰，跌至最新約<span data-v="onrrp.value|usd">—</span>。後備水缸越淺，財政部收支帶來的衝擊越會直接落在準備金上。</p>
+        <h2>錢去了哪裡</h2>
+        <p id="where-sub">講座的三條線：銀行的錢、政府戶口、後備資金池。</p>
       </div>
+      <div class="metrics three" id="kpis"></div>
       <div class="chart" id="chart-three" data-od-id="chart-three"></div>
-      <details class="table-view">
-        <summary>以表格查看最近8週</summary>
-        <div class="table-wrap"><table id="table-three"></table></div>
+      <details class="more">
+        <summary>三個戶口是甚麼？</summary>
+        <div class="more-body">
+          <p><b>準備金</b>：銀行存在聯準會的結算資金。它不是可以直接借給企業或散戶的錢，但太少時銀行之間借錢會變貴。</p>
+          <p><b>政府戶口（TGA）</b>：財政部在聯準會的戶口。政府收稅、發債時，錢由銀行流入這裡；政府花錢時，錢流回銀行。</p>
+          <p><b>後備資金池（ON RRP）</b>：貨幣市場基金等機構把閒錢隔夜存在聯準會。以前政府發債多數用這裡的錢，銀行的錢因而不受影響；現在它幾乎用完，政府收錢會較直接地抽走銀行的錢。</p>
+          <div class="table-wrap"><table id="table-three"></table></div>
+        </div>
       </details>
-    </section>
-
-    <section class="block" id="tanks" data-od-id="tanks">
-      <div class="block-head">
-        <h2>三個水缸怎樣連在一起</h2>
-        <p>把美元系統想像成一個城市的供水系統：聯準會是水廠，準備金是市場的水缸，TGA是政府的水缸，ON RRP是後備水缸。利率告訴我們水費有多貴，水管告訴我們水放在哪個缸、夠不夠用。</p>
-      </div>
-      <div class="tank-grid">
-        <article class="tank">
-          <h3><i class="sw" style="--c:var(--s1)"></i>市場水缸：銀行準備金</h3>
-          <p>銀行存放在聯準會的結算資金。錢由甲銀行轉到乙銀行，整個體系的總量不變；它不是可以直接借給企業或散戶的額度。</p>
-        </article>
-        <article class="tank">
-          <h3><i class="sw" style="--c:var(--s2)"></i>政府水缸：TGA</h3>
-          <p>財政部在聯準會開的現金戶口。政府收稅、發債時，資金由準備金流入TGA；政府支出時，資金流回銀行體系。</p>
-        </article>
-        <article class="tank">
-          <h3><i class="sw" style="--c:var(--s3)"></i>後備水缸：ON RRP</h3>
-          <p>隔夜逆回購：合資格機構（主要是貨幣市場基金）把現金隔夜停泊在聯準會。過去財政部發債時，資金多數從這裡流出，準備金因而受到保護；現在它接近見底，這層緩衝基本用完。</p>
-        </article>
-      </div>
-      <p class="fine">以上是其他條件不變時的方向。TGA每變動一元，準備金不一定跟著變動一元，還要看資金從哪裡來、流到哪裡。</p>
-    </section>
-
-    <section class="block" id="net-liquidity" data-od-id="net-liquidity">
-      <div class="block-head">
-        <h2>淨流動性代理指標</h2>
-        <p>水廠總共放出的水，扣除政府水缸和後備水缸裡的水，剩下的才是市場較用得到的水。這是市場常用的方向指標，不是會計恆等式，也不等於可以隨時拿去買資產的現金。</p>
-      </div>
-      <div class="formula" id="formula" aria-label="淨流動性計算"></div>
-      <div class="chart" id="chart-net" data-od-id="chart-net"></div>
-      <p class="fine">口徑：聯準會總資產（WALCL）用週三水平；TGA（WTREGEN）用截至週三的週平均，與上方卡片相同；ON RRP（RRPONTSYD）用該週三或之前最近一個工作天的數值。</p>
     </section>
 
     <section class="block" id="pressure" data-od-id="pressure">
       <div class="block-head">
-        <h2>年末壓力訊號</h2>
-        <p>水缸變淺，不代表一定出事。要看的是借錢是否越來越貴，以及越來越多機構要向聯準會借錢。季末、月末單日跳升較常見，持續的壓力才值得擔心。</p>
+        <h2>借錢壓力</h2>
+        <p>錢少了不一定出事，要看借錢有沒有變貴。</p>
       </div>
-      <div class="grid-2">
-        <div class="sub">
-          <h3>SOFR相對IORB（個基點）</h3>
-          <p class="sub-def">SOFR是以美國國債作抵押、借一晚美元的市場利率；IORB是聯準會付給銀行準備金的利率。SOFR持續高於IORB，代表市場上借錢比把錢放在聯準會更貴，資金偏緊。1個基點＝0.01個百分點。</p>
-          <div class="chart" id="chart-spread" data-od-id="chart-spread"></div>
-          <p class="fine">2021年7月29日前以超額準備金利率（IOER）比較，該利率其後由IORB取代。</p>
+      <div class="metrics two" id="pressure-metrics"></div>
+      <details class="more">
+        <summary>看走勢圖</summary>
+        <div class="more-body">
+          <div class="grid-2">
+            <div class="sub">
+              <h3>借錢成本差距（個基點）</h3>
+              <div class="chart bare" id="chart-spread" data-od-id="chart-spread"></div>
+            </div>
+            <div class="sub">
+              <h3>向聯準會緊急借錢（億美元）</h3>
+              <div class="chart bare" id="chart-srf" data-od-id="chart-srf"></div>
+            </div>
+          </div>
+          <p class="fine">借錢成本差距＝SOFR（以國債作抵押借一晚美元的利率）減IORB（聯準會付給銀行準備金的利率）；1個基點＝0.01%。2021年7月29日前以IOER比較。緊急借錢數據為聯準會每日隔夜回購操作總額（RPONTTLD），2021年7月起即常備回購工具（SRF）。季末、月末單日跳升較常見，持續的壓力才值得擔心。</p>
         </div>
-        <div class="sub">
-          <h3>常備回購使用量（億美元）</h3>
-          <p class="sub-def">常備回購工具（SRF）是聯準會隨時開放的短期借錢窗口，機構可以用國債等抵押品向聯準會借一晚現金。使用量明顯增加，代表市場上找不到足夠便宜的資金。</p>
-          <div class="chart" id="chart-srf" data-od-id="chart-srf"></div>
-          <p class="fine">數據為聯準會每日隔夜回購操作總額（RPONTTLD）。2021年7月起即常備回購操作；2019至2020年為臨時回購操作。</p>
-        </div>
-      </div>
+      </details>
     </section>
 
     <section class="block" id="long-rates" data-od-id="long-rates">
       <div class="block-head">
-        <h2>長端利率：10年及30年期國債殖利率</h2>
-        <p>殖利率是持有國債至到期的每年回報率。長端殖利率越高，長期借錢成本越高，股票等資產亦要面對「不冒險也有約5%回報」的比較。</p>
+        <h2>長期利率</h2>
+        <p>美國國債殖利率，即持有至到期每年可收的回報。</p>
       </div>
-      <div class="chart" id="chart-yields" data-od-id="chart-yields"></div>
+      <div class="metrics two" id="yield-metrics"></div>
+      <details class="more">
+        <summary>看走勢圖</summary>
+        <div class="more-body">
+          <div class="chart bare" id="chart-yields" data-od-id="chart-yields"></div>
+        </div>
+      </details>
     </section>
 
-    <section class="block" id="lesson-2019" data-od-id="lesson-2019">
-      <div class="block-head">
-        <h2>2019年9月的教訓</h2>
-        <p>企業交稅加上國債結算同時抽走現金，短短兩個工作天，隔夜借錢利率急升，聯準會當日重啟回購救火。市場最後沒有釀成大事故，很可能正是因為有人及時救火。</p>
-      </div>
-      <div class="facts">
-        <div class="fact"><b class="num">約1,200億美元</b><span>兩個工作天內準備金減少的金額</span></div>
-        <div class="fact"><b class="num">2.43% → 5.25%</b><span>SOFR由9月16日一日之間升至9月17日</span></div>
-        <div class="fact"><b class="num">約530億美元</b><span>9月17日首次回購實際注入的準備金；750億美元只是額度上限</span></div>
-      </div>
-      <p class="fine">同樣道理，3兆美元是參考水位，不是一跌穿就必定出事的紅線。準備金需求受銀行體系的規模、分布及監管要求影響，總量看似足夠，也不代表每個缺錢的地方都借得到。資料：<a href="https://www.federalreserve.gov/econres/notes/feds-notes/what-happened-in-money-markets-in-september-2019-20200227.htm" target="_blank" rel="noopener">聯準會 FEDS Notes（2020）</a>；SOFR數據來自FRED。</p>
-    </section>
-
-    <section class="block" id="rules" data-od-id="rules">
-      <div class="block-head">
-        <h2>判讀規則</h2>
-        <p>頁首的結論句及狀態標籤由以下固定規則自動生成，只描述現況，不作預測。門檻由本站設定，並非官方標準，亦未經回測。</p>
-      </div>
-      <ul class="rules">
-        <li><b>準備金</b>：週平均低於3兆美元，標示「低於參考水位」。3兆美元是講座採用的參考水位，不是官方紅線。</li>
-        <li><b>ON RRP</b>：低於1,000億美元，標示「氣墊接近用盡」。</li>
-        <li><b>SOFR相對IORB</b>：取最近5個交易日平均。−3個基點或以下為「資金暢順」；−3至+2個基點為「貼近IORB，值得留意」；高於+2個基點為「壓力浮現」。</li>
-        <li><b>常備回購</b>：取最近5個交易日的最高使用量。少於10億美元為「幾乎沒有使用」；10億至100億美元為「少量使用」；100億美元或以上為「明顯使用」。</li>
-        <li><b>結論句</b>：SOFR出現「壓力浮現」或常備回購「明顯使用」時，改為顯示壓力訊號；否則描述準備金相對參考水位及ON RRP緩衝。</li>
-      </ul>
-    </section>
-
-    <section class="block" id="sources" data-od-id="sources">
-      <div class="block-head">
-        <h2>數據來源及更新時間</h2>
-        <p>全部數據來自聖路易斯聯儲的FRED資料庫，原始來源為聯準會H.4.1（每週四美國時間下午公布，約為香港時間週五清晨）、H.15及紐約聯儲。本頁每日約香港時間03:30、06:30及21:30自動抓取，另有每3小時一次的後備排程；數據可能延誤或被官方修訂。</p>
-      </div>
-      <div class="table-wrap"><table class="sources" id="table-sources"></table></div>
-      <p class="fine" id="checked-at"></p>
+    <section class="block" id="more" data-od-id="more">
+      <div class="block-head"><h2>更多說明</h2></div>
+      <details class="more">
+        <summary>3兆美元是紅線嗎？</summary>
+        <div class="more-body">
+          <p>不是。3兆是講座採用的參考水位，不是官方紅線。準備金夠不夠，要看銀行體系的規模、分布及監管要求。</p>
+          <p>2019年9月是例子：企業交稅加上國債結算，兩個工作天內準備金減少約1,200億美元；隔夜借錢利率（SOFR）一日內由2.43%升至5.25%；聯準會當日重啟回購，實際注入約530億美元（750億是上限）。市場最後沒有出大事，很可能正是因為及時救火。</p>
+          <p class="fine">資料：<a href="https://www.federalreserve.gov/econres/notes/feds-notes/what-happened-in-money-markets-in-september-2019-20200227.htm" target="_blank" rel="noopener">聯準會 FEDS Notes（2020）</a>；SOFR數據來自FRED。</p>
+        </div>
+      </details>
+      <details class="more">
+        <summary>標籤怎樣判斷？</summary>
+        <div class="more-body">
+          <ul class="rules">
+            <li>準備金：週平均低於3兆美元，標示「跌穿3兆」。</li>
+            <li>後備資金池：低於1,000億美元，標示「幾乎用完」。</li>
+            <li>借錢成本差距：取近5日平均。−3個基點或以下「正常」；−3至+2「貼近警戒位」；高於+2「借錢變貴」。</li>
+            <li>緊急借錢：取近5日最高。少於10億美元「幾乎無人使用」；10億至100億「少量使用」；100億或以上「大量使用」。</li>
+            <li>頁首結論句按以上規則自動生成，只描述現況。門檻由本站設定，並非官方標準，亦未經回測。</li>
+          </ul>
+        </div>
+      </details>
+      <details class="more">
+        <summary>數據來源及更新時間</summary>
+        <div class="more-body">
+          <p>聯準會數據來自聖路易斯聯儲FRED（H.4.1每週四美國時間下午公布，約香港時間週五清晨；H.15及紐約聯儲每日公布）；每日政府戶口來自美國財政部每日報表。本頁每日約香港時間03:30、06:30及21:30自動抓取，另有後備排程。</p>
+          <div class="table-wrap"><table class="sources" id="table-sources"></table></div>
+          <p class="fine" id="checked-at"></p>
+        </div>
+      </details>
     </section>
   </main>
 
   <footer class="footer" data-od-id="disclaimer">
-    <p><b>免責聲明</b>：本頁屬情境觀察及教育用途，整理公開的官方數據，不構成任何證券或金融產品的要約、招攬或個人化投資建議。判讀規則為本站自訂，並非已回測的買賣訊號。數據可能延誤或修訂，一切以官方來源為準。本站與聯準會、紐約聯儲及聖路易斯聯儲沒有任何關係。</p>
-    <p>資料來源：Federal Reserve Bank of St. Louis, FRED；Board of Governors of the Federal Reserve System（H.4.1、H.15）；Federal Reserve Bank of New York（SOFR、ON RRP、回購操作）。</p>
-    <p>整理：<a href="https://lazybeanz.substack.com/" target="_blank" rel="noopener">Lazy(Beanz)</a> · 框架來自2026年9月FOMC講座「美元水管」一節</p>
+    <p><b>免責聲明</b>：本頁屬情境觀察及教育用途，整理公開的官方數據，不構成任何證券或金融產品的要約、招攬或投資建議。標籤規則由本站設定，並非買賣訊號。數據可能延誤或修訂，一切以官方來源為準。本站與聯準會、紐約聯儲、聖路易斯聯儲及美國財政部沒有任何關係。</p>
+    <p>整理：<a href="https://lazybeanz.substack.com/" target="_blank" rel="noopener">Lazy(Beanz)</a> · 框架來自2026年9月FOMC講座「美元水管」</p>
   </footer>
 </div>
 <script type="module" src="assets/app.js"></script>
