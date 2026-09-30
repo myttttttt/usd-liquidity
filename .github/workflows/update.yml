@@ -2,13 +2,14 @@ name: Update data and deploy
 
 # 每日由 FRED 抓官方數據 → 測試及檢查 → 官方數據有新一期才 commit → 部署 GitHub Pages。
 # 公開 repo 的 Actions 分鐘及 Pages 均免費，不佔 RS Terminal 私人 repo 的 Actions 預算，亦不依賴 Mac 開機。
-# 22:20 UTC（香港 06:20）：接住週四美國下午公布的 H.4.1（準備金、TGA、總資產）及前一日殖利率。
-# 13:40 UTC（香港 21:40，平日）：接住美國早上公布的 SOFR、ON RRP 及回購操作。
-# GitHub 排程可能遲到；遲到只會令更新較晚，不影響數據正確。
+# 每 3 小時一次（UTC 00:20、03:20…21:20）。官方數據在不同時間公布（H.4.1 週四美國下午、
+# SOFR／ON RRP 美國早上、殖利率翌日），多次抓取可較早接住新一期。
+# 2026-09-30 實測：本帳戶 GitHub 排程會遲 3 小時以上，亦會整班丟失（RS 20:38 班遲至 23:55；
+# qp-discord-relay 每小時班只跑了幾次），所以用較密的班次增加成功機會。公開 repo 跑多少次都免費；
+# 官方數據沒有新一期就不 commit，只重新部署以更新「最後自動抓取」時間。
 on:
   schedule:
-    - cron: "20 22 * * *"
-    - cron: "40 13 * * 1-5"
+    - cron: "20 */3 * * *"
   workflow_dispatch:
   push:
     branches: [main]
