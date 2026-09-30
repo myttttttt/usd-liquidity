@@ -9,7 +9,7 @@
 ## 運作方式
 
 - 數據：FRED 官方 CSV（免 API key），序列見 `scripts/lib.mjs` 的 `SERIES`。
-- 自動更新：`.github/workflows/update.yml`，約每 3 小時執行一次（GitHub 排程可能延遲或漏班，班次較密以增加成功機會）；測試 → 抓數 → 檢查 → 官方數據有新一期才 commit → 部署 GitHub Pages。
+- 自動更新：`.github/workflows/update.yml`。主觸發為 cron-job.org（每日香港 03:30、06:30、21:30，workflow_dispatch）；GitHub 排程每 3 小時一次作後備（可能延遲或漏班）；測試 → 抓數 → 檢查 → 官方數據有新一期才 commit → 部署 GitHub Pages。
 - 單一序列抓取失敗會沿用上一版（`data/raw.json`）並在網頁標示；結構或數值不合理則工作流程失敗，GitHub 會發通知。
 - 網頁：純靜態 `site/`，手寫 SVG 圖表，沒有外部圖表庫；數字格式及結論規則在 `site/assets/format.mjs`，網頁與數據腳本共用。
 

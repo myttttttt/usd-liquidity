@@ -2,7 +2,8 @@ name: Update data and deploy
 
 # 每日由 FRED 抓官方數據 → 測試及檢查 → 官方數據有新一期才 commit → 部署 GitHub Pages。
 # 公開 repo 的 Actions 分鐘及 Pages 均免費，不佔 RS Terminal 私人 repo 的 Actions 預算，亦不依賴 Mac 開機。
-# 每 3 小時一次（UTC 00:20、03:20…21:20）。官方數據在不同時間公布（H.4.1 週四美國下午、
+# 主觸發：cron-job.org job「usd-liquidity update」以 workflow_dispatch 每日香港 03:30、06:30、21:30 觸發（準時）。
+# 後備：以下 GitHub 排程每 3 小時一次（UTC 00:20、03:20…21:20）。官方數據在不同時間公布（H.4.1 週四美國下午、
 # SOFR／ON RRP 美國早上、殖利率翌日），多次抓取可較早接住新一期。
 # 2026-09-30 實測：本帳戶 GitHub 排程會遲 3 小時以上，亦會整班丟失（RS 20:38 班遲至 23:55；
 # qp-discord-relay 每小時班只跑了幾次），所以用較密的班次增加成功機會。公開 repo 跑多少次都免費；
