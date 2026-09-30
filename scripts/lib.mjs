@@ -13,6 +13,10 @@ export const SERIES = {
   IOER: { scale: 1, note: "超額準備金利率，至 2021-07-28（%）" },
   DGS10: { scale: 1, note: "10 年期國債殖利率（%）" },
   DGS30: { scale: 1, note: "30 年期國債殖利率（%）" },
+  // 對比用資產（FRED 標示：Coinbase 系列須註明出處；美元指數為公有領域）
+  CBBTCUSD: { scale: 1, note: "BTC，Coinbase 每日收市（美元）" },
+  CBETHUSD: { scale: 1, note: "ETH，Coinbase 每日收市（美元）" },
+  DTWEXBGS: { scale: 1, note: "美元指數（聯準會名義廣義美元指數）" },
 };
 
 export function parseFredCsv(text, id) {
@@ -51,6 +55,7 @@ export function parseTreasuryTga(rows) {
 
 const round = (v, p = 3) => (v == null ? null : Math.round(v * 10 ** p) / 10 ** p);
 const scaled = (rows, k) => rows.map(([d, v]) => [d, round(v * k)]);
+const scaled2 = (rows = []) => rows.map(([d, v]) => [d, round(v, 2)]);
 
 // 找出 ≤ 指定日期的最後一個數值（二分搜尋）；rows 必須按日期遞增
 export function valueAsOf(rows, d, maxLagDays = Infinity) {
@@ -107,14 +112,22 @@ export function buildDataset(raw, generatedAt = new Date().toISOString()) {
     },
     weekly: { reserves, tga },
     daily: { netliq, onrrp, rates, srf, yields },
+    // 與淨流動性對比的資產價格（黃金以 PAXG 代幣報價代表，1 PAXG＝1 金衡盎司倫敦金）
+    compare: {
+      btc: scaled2(raw.CBBTCUSD),
+      eth: scaled2(raw.CBETHUSD),
+      gold: scaled2(raw.PAXG ?? []),
+      usd: scaled2(raw.DTWEXBGS),
+    },
   };
   data.summary = summarize(data);
+  data.daily.netliq = netliq.map((r) => [r[0], r[4]]);
   return data;
 }
 
 const last = (rows, back = 0) => rows[rows.length - 1 - back];
 
-export function summarize({ weekly, daily, meta = {} }) {
+export function summarize({ weekly, daily, meta = {}, compare: cmp = {} }) {
   const R = weekly.reserves, T = weekly.tga;
   const reserves = {
     date: last(R)[0],
@@ -200,7 +213,9 @@ export function summarize({ weekly, daily, meta = {} }) {
     y30_chg_1m: y30m == null || ly[2] == null ? null : round((ly[2] - y30m) * 100, 0),
   };
 
-  const s = { reserves, tga, onrrp, netliq, rates, srf, yields };
+  const lastOf = (rows) => (rows?.length ? { date: last(rows)[0], value: last(rows)[1] } : null);
+  const compare = Object.fromEntries(Object.entries(cmp).map(([k, rows]) => [k, lastOf(rows)]));
+  const s = { reserves, tga, onrrp, netliq, rates, srf, yields, compare };
   s.headline = headline(s);
   return s;
 }
@@ -218,7 +233,8 @@ export function validate(data) {
   };
   checkRows("準備金", data.weekly.reserves, 500, 8000);
   checkRows("TGA", data.weekly.tga, 0, 3000);
-  checkRows("淨流動性", data.daily.netliq, 1000, 12000, 4);
+  checkRows("淨流動性", data.daily.netliq, 1000, 12000);
+  for (const [k, rows] of Object.entries(data.compare ?? {})) checkRows(`對比 ${k}`, rows, 0.01, 1e7);
   checkRows("ON RRP", data.daily.onrrp, 0, 3500);
   checkRows("SOFR", data.daily.rates, -1, 12);
   checkRows("常備回購", data.daily.srf, 0, 1000);

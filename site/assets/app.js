@@ -137,19 +137,42 @@ function lastIndexAtOrBefore(rows, t) {
   return hit;
 }
 
+const pctFmt = (v) => `${v > 0.05 ? "+" : v < -0.05 ? "−" : ""}${Math.abs(v).toFixed(1)}%`;
+const priceTick = (v, step) => Math.abs(v) >= 10000
+  ? `${(v / 1000).toLocaleString("en-US", { maximumFractionDigits: step >= 1000 ? 0 : 1 })}k`
+  : v.toLocaleString("en-US", { maximumFractionDigits: step >= 1 ? 0 : step >= 0.1 ? 1 : 2 });
+
 class Chart {
   constructor(el, cfg) {
     this.el = el;
     this.cfg = cfg;
     this.range = cfg.range;
-    this.series = cfg.series.map((s) => ({
+    const prep = (s) => ({
       ...s,
       rows: s.rows.filter((r) => r[s.col ?? 1] != null).map((r) => ({ d: r[0], t: toT(r[0]), v: s.map ? s.map(r) : r[s.col ?? 1] })),
-    }));
+    });
+    this.base = cfg.series.map(prep);
+    // 可加入的對比資產；加入後全部改為「由起點計的升跌%」，避免兩條刻度
+    this.extra = (cfg.compare ?? []).map(prep).filter((s) => s.rows.length);
+    this.active = new Set();
+    this.series = this.base;
+    const cmp = this.extra.length
+      ? `<div class="cmp" role="group" aria-label="加入對比"><span>對比</span>${this.extra
+          .map((s) => `<button type="button" data-k="${s.key}" aria-pressed="false"><i class="sw${s.dash ? " dash" : ""}" style="--c:var(${s.color})"></i>${esc(s.label)}</button>`).join("")}</div>`
+      : "";
     el.innerHTML = `<div class="chart-top"><div class="legend"></div>
       <div class="seg" role="group" aria-label="時間範圍">${Object.keys(cfg.ranges)
         .map((k) => `<button type="button" data-r="${k}" aria-pressed="${k === this.range}">${k}</button>`).join("")}</div></div>
+      ${cmp}
       <div class="plot"><svg tabindex="0" role="img" aria-label="${esc(cfg.aria)}"></svg></div>`;
+    el.querySelectorAll(".cmp button").forEach((b) => b.addEventListener("click", () => {
+      const k = b.dataset.k;
+      this.active.has(k) ? this.active.delete(k) : this.active.add(k);
+      b.setAttribute("aria-pressed", String(this.active.has(k)));
+      this.series = [...this.base, ...this.extra.filter((s) => this.active.has(s.key))];
+      this.hover = null;
+      this.render();
+    }));
     this.legend = $(".legend", el);
     this.svg = $("svg", el);
     this.plot = $(".plot", el);
@@ -168,35 +191,55 @@ class Chart {
     const cfg = this.cfg;
     const W = Math.max(240, Math.floor(this.plot.clientWidth));
     const narrow = W < 520;
-    const H = narrow ? 210 : 280;
+    const H1 = narrow ? 210 : 280, H2 = narrow ? 92 : 112, GAP = 30;
     const tEnd = Math.max(...this.series.map((s) => s.rows.at(-1).t));
     const days = cfg.ranges[this.range];
-    const tStart = days ? tEnd - days * DAY : Math.min(...this.series.map((s) => s.rows[0].t));
+    const tStart = days ? tEnd - days * DAY : Math.min(...this.base.map((s) => s.rows[0].t));
 
     const vis = this.series.map((s) => {
       const i0 = Math.max(0, lastIndexAtOrBefore(s.rows, tStart));
       return s.rows.slice(s.rows[i0].t < tStart && i0 + 1 < s.rows.length ? i0 + 1 : i0);
     });
-    let lo = Infinity, hi = -Infinity;
-    for (const rows of vis) for (const r of rows) { if (r.v < lo) lo = r.v; if (r.v > hi) hi = r.v; }
-    for (const ref of cfg.refs ?? []) { lo = Math.min(lo, ref.y); hi = Math.max(hi, ref.y); }
-    if (cfg.zero || cfg.type === "bar") { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
-    const ticks = niceTicks(lo, hi, narrow ? 4 : 5);
-    lo = ticks[0]; hi = ticks.at(-1);
-    const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
-    const labels = ticks.map((v) => cfg.yTick(v, step));
-    const ml = Math.max(...labels.map((l) => l.length)) * 7 + 10;
+    // 分格：第一格放主線；每個加入的對比資產各佔一格，各自刻度，共用日期軸（不用雙刻度）
+    const groups = [{ idx: this.base.map((_, i) => i), h: H1, main: true }];
+    for (let i = this.base.length; i < this.series.length; i++) groups.push({ idx: [i], h: H2 });
+    for (const g of groups) {
+      let lo = Infinity, hi = -Infinity;
+      for (const i of g.idx) for (const r of vis[i]) { if (r.v < lo) lo = r.v; if (r.v > hi) hi = r.v; }
+      if (g.main) {
+        for (const ref of cfg.refs ?? []) { lo = Math.min(lo, ref.y); hi = Math.max(hi, ref.y); }
+        if (cfg.zero || cfg.type === "bar") { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+      }
+      if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
+      g.ticks = niceTicks(lo, hi, g.main ? (narrow ? 4 : 5) : 3);
+      const step = g.ticks.length > 1 ? g.ticks[1] - g.ticks[0] : 1;
+      g.labels = g.ticks.map((v) => (g.main ? cfg.yTick(v, step) : priceTick(v, step)));
+    }
+    const ml = Math.max(...groups.flatMap((g) => g.labels.map((l) => l.length))) * 7 + 10;
     const m = { l: ml, r: 8, t: cfg.marks ? 20 : 8, b: 22 };
-    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    let top = m.t;
+    for (const g of groups) { g.top = top; g.bot = top + g.h; top = g.bot + GAP; }
+    const H = groups.at(-1).bot + m.b;
+    const pw = W - m.l - m.r;
     const X = (t) => m.l + ((t - tStart) / (tEnd - tStart)) * pw;
-    const Y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * ph;
-    Object.assign(this, { W, H, m, X, Y, tStart, tEnd, vis, pw });
+    const Ys = [];
+    for (const g of groups) {
+      const lo = g.ticks[0], hi = g.ticks.at(-1);
+      g.Y = (v) => g.top + (1 - (v - lo) / (hi - lo)) * g.h;
+      for (const i of g.idx) Ys[i] = g.Y;
+    }
+    const Y = groups[0].Y, lo = groups[0].ticks[0];
+    Object.assign(this, { W, H, m, X, Ys, tStart, tEnd, vis, pw });
 
     let g = `<g class="grid">`;
-    ticks.forEach((v, i) => {
-      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}"/>`;
-      g += `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${labels[i]}</text>`;
+    for (const gr of groups) gr.ticks.forEach((v, k) => {
+      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${gr.Y(v)}" y2="${gr.Y(v)}"/>`;
+      g += `<text x="${m.l - 6}" y="${gr.Y(v) + 4}" text-anchor="end">${gr.labels[k]}</text>`;
     });
+    for (const gr of groups.slice(1)) {
+      const sr = this.series[gr.idx[0]];
+      g += `<text class="mk" x="${m.l}" y="${gr.top - 10}">${esc(sr.label)}${sr.unit ? `（${esc(sr.unit)}）` : ""}</text>`;
+    }
     g += `</g>`;
 
     // X 軸：跨度長用年份，中用月份，短用日期（每週一）
@@ -252,7 +295,7 @@ class Chart {
         for (const r of rows) { const k = Math.floor(X(r.t)); if (!buckets.has(k) || r.v > buckets.get(k)) buckets.set(k, r.v); }
         const bw = Math.max(1, Math.min(4, (pw / rows.length) * 0.8));
         let d = "";
-        for (const [k, v] of buckets) if (v > 0) d += `M${k + 0.5} ${Y(0)}V${Math.min(Y(v), Y(0) - 1)}`;
+        for (const [k, v] of buckets) if (v > 0) d += `M${k + 0.5} ${Ys[i](0)}V${Math.min(Ys[i](v), Ys[i](0) - 1)}`;
         paths += `<path class="bars" d="${d}" style="stroke-width:${bw}"/>`;
       } else {
         // 每個像素只保留首、最低、最高、尾四點，保留形狀並減少節點
@@ -262,12 +305,12 @@ class Chart {
           const a = pts[0], z = pts.at(-1);
           let mn = a, mx = a;
           for (const p of pts) { if (p.v < mn.v) mn = p; if (p.v > mx.v) mx = p; }
-          for (const p of [a, mn, mx, z].sort((p, q) => p.t - q.t)) d += `${d ? "L" : "M"}${X(p.t).toFixed(1)} ${Y(p.v).toFixed(1)}`;
+          for (const p of [a, mn, mx, z].sort((p, q) => p.t - q.t)) d += `${d ? "L" : "M"}${X(p.t).toFixed(1)} ${Ys[i](p.v).toFixed(1)}`;
           pts = [];
         };
         for (const r of rows) { const k = Math.round(X(r.t)); if (k !== cur) { flush(); cur = k; } pts.push(r); }
         flush();
-        paths += `<path class="series" d="${d}" style="stroke:var(${s.color})"/>`;
+        paths += `<path class="series" d="${d}" style="stroke:var(${s.color});stroke-width:${s.width ?? 2}px${s.dash ? ";stroke-dasharray:6 4" : ""}"/>`;
       }
     });
 
@@ -323,21 +366,24 @@ class Chart {
         const x = this.X(at.t);
         let h = `<line class="cross" x1="${x}" x2="${x}" y1="${this.m.t}" y2="${this.H - this.m.b}"/>`;
         values.forEach((r, i) => {
-          if (!r) return;
+          if (!r || r.t < this.tStart) return;
           const color = cfg.type === "bar" ? "var(--bar)" : `var(${this.series[i].color})`;
-          h += `<circle class="dot" cx="${this.X(r.t)}" cy="${this.Y(r.v)}" r="4.5" style="fill:${color}"/>`;
+          h += `<circle class="dot" cx="${this.X(r.t)}" cy="${this.Ys[i](r.v)}" r="4.5" style="fill:${color}"/>`;
         });
         layer.innerHTML = h;
       }
     }
+    const cmp = this.series.length > this.base.length;
     // 數值已在卡片大字顯示的圖表：未觸碰時只顯示提示，避免重複
-    if (!at && cfg.idleHint) { this.legend.innerHTML = `<span class="lg-hint">${cfg.idleHint}</span>`; return; }
-    const dateLabel = at ? fmtDate(at.d) : `最新（${fmtDate(values[0].d, { year: false })}）`;
+    if (!at && cfg.idleHint && !cmp) { this.legend.innerHTML = `<span class="lg-hint">${cfg.idleHint}</span>`; return; }
+    const dateLabel = (at ? fmtDate(at.d) : `最新（${fmtDate(values[0].d, { year: false })}）`) + (cmp ? "・括號內為所選期間的升跌" : "");
     let lg = `<span class="lg-date">${dateLabel}</span>`;
     values.forEach((r, i) => {
       const s = this.series[i];
       const sw = cfg.type === "bar" ? "var(--bar)" : `var(${s.color})`;
-      lg += `<span class="lg"><i class="sw" style="--c:${sw}"></i>${esc(s.label)} <b>${r ? cfg.fmt(r.v) : "—"}</b></span>`;
+      const first = this.vis[i][0];
+      const chg = cmp && r && first ? ` <small class="lg-chg">${pctFmt((r.v / first.v - 1) * 100)}</small>` : "";
+      lg += `<span class="lg"><i class="sw${s.dash ? " dash" : ""}" style="--c:${sw}"></i>${esc(s.label)} <b>${r ? (s.fmt ?? cfg.fmt)(r.v) : "—"}</b>${chg}</span>`;
     });
     for (const ref of cfg.refs ?? []) lg += `<span class="lg"><i class="sw dash" style="--c:var(--ref)"></i>${esc(ref.label)}</span>`;
     this.legend.innerHTML = lg;
@@ -354,7 +400,13 @@ function renderCharts(data) {
   charts.push(new Chart($("#chart-net"), {
     aria: "市場上的錢（淨流動性）每日走勢，單位兆美元",
     range: "3個月", ranges: { "1個月": 31, "3個月": 92, "1年": 365, "全部": null },
-    series: [{ label: "淨流動性", color: "--accent", rows: d.netliq, col: 4 }],
+    series: [{ label: "淨流動性", color: "--text", width: 2.5, rows: d.netliq }],
+    compare: [
+      { key: "btc", label: "BTC", unit: "美元", color: "--c-btc", rows: data.compare.btc, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
+      { key: "gold", label: "黃金", unit: "美元／盎司", color: "--c-gold", rows: data.compare.gold, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
+      { key: "eth", label: "ETH", unit: "美元", color: "--c-eth", dash: true, rows: data.compare.eth, fmt: (v) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 0 : 2 }) },
+      { key: "usd", label: "美元指數", unit: "指數", color: "--c-usd", rows: data.compare.usd, fmt: (v) => v.toFixed(2) },
+    ],
     idleHint: "按圖查看每日數值",
     yTick: tri,
     fmt: (v) => fmtUsd(v, { unit: false }),
@@ -433,6 +485,13 @@ function renderTables(data) {
     ["10年期國債", fred("DGS10"), "每日", s.yields.date, fmtPct(s.yields.y10)],
     ["30年期國債", fred("DGS30"), "每日", s.yields.date, fmtPct(s.yields.y30)],
   ];
+  const c = s.compare ?? {};
+  const px = (v) => v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const bnb = `<a href="https://www.binance.com/en/trade/PAXG_USDT" target="_blank" rel="noopener">Binance PAXG/USDT</a>`;
+  if (c.btc) src.push(["對比：BTC", fred("CBBTCUSD"), "Coinbase每日（美元）", c.btc.date, px(c.btc.value)]);
+  if (c.eth) src.push(["對比：ETH", fred("CBETHUSD"), "Coinbase每日（美元）", c.eth.date, px(c.eth.value)]);
+  if (c.gold) src.push(["對比：黃金", bnb, "PAXG代幣每日收市（美元，1枚＝1盎司金）", c.gold.date, px(c.gold.value)]);
+  if (c.usd) src.push(["對比：美元指數", fred("DTWEXBGS"), "聯準會廣義美元指數", c.usd.date, px(c.usd.value)]);
   // 手機上表格可橫向捲動；數值及日期放前面
   $("#table-sources").innerHTML = `<thead><tr><th>指標</th><th class="n">最新數值</th><th>日期</th><th>來源</th><th>口徑</th></tr></thead><tbody>${src
     .map(([n, link, k, dt, v]) => `<tr><td>${n}</td><td class="n">${v}</td><td>${fmtDate(dt)}</td><td>${link}</td><td>${k}</td></tr>`).join("")}</tbody>`;

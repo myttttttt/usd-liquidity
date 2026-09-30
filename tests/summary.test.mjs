@@ -47,6 +47,10 @@ function synth({ reserves = 2930, tgaDelta = 100, rrp = 0.8, spread = 0, srf = 0
     IOER: [["2020-01-01", 1.6]],
     DGS10: dd(() => 5.1),
     DGS30: dd(() => 5.4),
+    CBBTCUSD: dd((i) => 50000 + i),
+    CBETHUSD: dd((i) => 3000 + i),
+    DTWEXBGS: dd(() => 120),
+    PAXG: dd(() => 4000),
   };
 }
 
@@ -86,6 +90,8 @@ test("每日淨流動性＝總資產（沿用最近週三）－每日TGA－ON RR
   assert.equal(n.value, Math.round((6700 - 1000 - 0.8) * 1000) / 1000);
   assert.equal(n.chg_1m, -100);
   assert.ok(data.meta.walcl_date <= n.date);
+  assert.equal(data.daily.netliq.at(-1)[1], n.value);
+  assert.equal(data.summary.compare.btc.value, 50419);
 });
 
 test("財政部每日TGA：三種舊新格式都讀到", () => {

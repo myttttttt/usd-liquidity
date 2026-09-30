@@ -19,6 +19,7 @@
   --grid: #2c2d2f;
   --ref: #8f8c85;
   --bar: #b7b4ad;
+  --c-btc: #d67523; --c-gold: #4682cc; --c-eth: #bb5faa; --c-usd: #29a077; /* 對比資產，已驗證 */
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -39,6 +40,7 @@
   --grid: #e6e0d4;
   --ref: #7d8078;
   --bar: #5c635d;
+  --c-btc: #be5a0a; --c-gold: #2063b0; --c-eth: #a0388f; --c-usd: #008760;
   color-scheme: light;
 }
 
@@ -228,3 +230,11 @@ td.n, th.n { text-align: right; }
 .metric .read { margin: 0; }
 .nl-val b .u, .m-val .u { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; font-size: 13px; font-weight: 400; color: var(--text-2); margin-left: 2px; letter-spacing: 0; }
 .legend .lg-hint { color: var(--text-3); min-height: 19px; }
+
+/* 對比資產按鈕 */
+.cmp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-3); }
+.cmp button { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--text-2); background: transparent; border: 1px solid var(--border); border-radius: 99px; min-height: 32px; padding: 3px 11px; cursor: pointer; }
+.cmp button[aria-pressed="true"] { background: var(--card-deep); color: var(--text); border-color: var(--text-3); font-weight: 600; }
+.cmp button:not([aria-pressed="true"]) .sw { opacity: 0.45; }
+.sw.dash { background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px); border: 0; height: 3px; }
+.legend .lg-chg { color: var(--text-3); font-size: 11px; }

@@ -57,6 +57,36 @@ async function fetchTreasuryTga() {
   return tga;
 }
 
+// Binance 公開市場數據域名（data-api.binance.vision，免 key、不封雲端 IP）的日線收市。
+// 日期取該根日線的 UTC 開始日，收市價即該日 UTC 23:59:59 的價格。
+async function fetchBinanceDaily(symbol, start = "2019-01-01") {
+  const out = [];
+  let from = Date.parse(start + "T00:00:00Z");
+  for (let i = 0; i < 20; i++) {
+    const url = `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=1d&startTime=${from}&limit=1000`;
+    let rows, lastErr;
+    for (let attempt = 1; attempt <= 3 && !rows; attempt++) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        rows = await res.json();
+      } catch (e) {
+        lastErr = e;
+        await sleep(2000 * attempt);
+      }
+    }
+    if (!rows) throw new Error(`${symbol}: ${lastErr?.message}`);
+    for (const k of rows) out.push([new Date(k[0]).toISOString().slice(0, 10), Number(k[4])]);
+    if (rows.length < 1000) break;
+    from = rows.at(-1)[0] + 864e5;
+  }
+  // 最後一根日線未收市，不計
+  const today = new Date().toISOString().slice(0, 10);
+  const done = out.filter(([d]) => d < today);
+  if (done.length === 0) throw new Error(`${symbol}: 沒有數據`);
+  return done;
+}
+
 async function readJson(url) {
   try {
     return JSON.parse(await readFile(url, "utf8"));
@@ -68,9 +98,9 @@ async function readJson(url) {
 const previous = await readJson(RAW_CACHE);
 const raw = {};
 const stale = [];
-for (const id of [...Object.keys(SERIES), "TGA_DTS"]) {
+for (const id of [...Object.keys(SERIES), "TGA_DTS", "PAXG"]) {
   try {
-    raw[id] = id === "TGA_DTS" ? await fetchTreasuryTga() : await fetchSeries(id);
+    raw[id] = id === "TGA_DTS" ? await fetchTreasuryTga() : id === "PAXG" ? await fetchBinanceDaily("PAXGUSDT") : await fetchSeries(id);
   } catch (e) {
     if (previous?.[id]?.length) {
       raw[id] = previous[id];

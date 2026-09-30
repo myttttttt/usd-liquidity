@@ -22,6 +22,9 @@ const checks = [
   ["RPONTTLD", s.srf.date, s.srf.value, 1],
   ["DGS10", s.yields.date, s.yields.y10, 1],
   ["DGS30", s.yields.date, s.yields.y30, 1],
+  ...(s.compare?.btc ? [["CBBTCUSD", s.compare.btc.date, s.compare.btc.value, 1]] : []),
+  ...(s.compare?.eth ? [["CBETHUSD", s.compare.eth.date, s.compare.eth.value, 1]] : []),
+  ...(s.compare?.usd ? [["DTWEXBGS", s.compare.usd.date, s.compare.usd.value, 1]] : []),
 ];
 
 let bad = 0;
@@ -32,7 +35,8 @@ for (const [id, date, value, scale] of checks) {
   const rows = parseFredCsv(await res.text(), id);
   const same = rows.find((r) => r[0] === date);
   const fredVal = same ? Math.round(same[1] * scale * 1000) / 1000 : null;
-  const ok = fredVal != null && Math.abs(fredVal - value) < 1e-6;
+  const tol = id.startsWith("CB") || id === "DTWEXBGS" ? 0.006 : 1e-6; // 對比資產存兩位小數
+  const ok = fredVal != null && Math.abs(fredVal - value) < tol;
   const newer = rows.at(-1)[0] > date ? "（FRED已有較新一期）" : "";
   if (!ok) bad++;
   console.log(`${id.padEnd(11)} ${date}  ${String(value).padEnd(14)}  ${String(fredVal).padEnd(14)}  ${rows.at(-1)[0]}    ${ok ? "一致" : "不一致"}${newer}`);
@@ -49,6 +53,15 @@ for (const [id, date, value, scale] of checks) {
   const ok2 = Math.abs(calc - s.netliq.value) < 1e-6;
   if (!ok2) bad++;
   console.log(`淨流動性 ${s.netliq.value} ＝ ${s.netliq.walcl} − ${s.netliq.tga} − ${s.netliq.rrp}：${ok2 ? "算式一致" : "算式不一致"}`);
+}
+// 黃金（PAXG）：與 Binance 同日日線收市核對
+if (s.compare?.gold) {
+  const t0 = Date.parse(s.compare.gold.date + "T00:00:00Z");
+  const k = await (await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=1d&startTime=${t0}&limit=1`)).json();
+  const v = k[0] ? Math.round(Number(k[0][4]) * 100) / 100 : null;
+  const ok = v != null && Math.abs(v - s.compare.gold.value) < 0.006;
+  if (!ok) bad++;
+  console.log(`${"PAXGUSDT".padEnd(11)} ${s.compare.gold.date}  ${String(s.compare.gold.value).padEnd(14)}  ${String(v).padEnd(14)}  (Binance)     ${ok ? "一致" : "不一致"}`);
 }
 console.log(bad ? `\n❌ ${bad} 項不一致` : "\n✅ 全部與官方同日數值一致");
 process.exit(bad ? 1 : 0);
