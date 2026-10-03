@@ -411,7 +411,7 @@ function renderCharts(data) {
       { key: "usd", label: "美元指數", unit: "指數", color: "--c-usd", rows: data.compare.usd, fmt: (v) => v.toFixed(2) },
     ],
     idleHint: "按圖查看每日數值",
-    note: "<b>提醒</b>：資產價格會受流動性影響，但不是線性關係（即不會按比例同升同跌），不宜逐日對照；建議留意大時區（「1年」或「全部」）的方向轉變。",
+    note: "<b>提醒</b>：資產價格會受流動性影響，但不是線性關係（即不會按比例同升同跌），不宜逐日對照，建議留意大時區（「1年」或「全部」）的方向轉變。",
     yTick: tri,
     fmt: (v) => fmtUsd(v, { unit: false }),
   }));
