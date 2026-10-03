@@ -63,7 +63,7 @@ test("平靜情境：低於3兆、氣墊用盡、貼近IORB", () => {
   assert.equal(s.onrrp.cushion_low, true);
   assert.equal(s.rates.status, "at");
   assert.equal(s.srf.status, "none");
-  assert.equal(s.headline.title, "準備金跌穿3兆美元，後備資金池幾乎用完");
+  assert.equal(s.headline.title, "準備金跌穿3兆美元，備用錢包幾乎用完");
   assert.equal(s.headline.lede, "市場上的錢（淨流動性）近一個月減少1,000億美元。借錢成本貼近警戒位，但暫未見持續壓力。");
   assert.equal(s.onrrp.peak, 2500);
   assert.deepEqual(validate(data), []);
@@ -81,7 +81,7 @@ test("壓力情境：SOFR持續高於IORB或常備回購明顯使用", () => {
 
 test("寬鬆情境：高於3兆及ON RRP仍有緩衝", () => {
   const s = buildDataset(synth({ reserves: 3300, tgaDelta: -50, rrp: 400, spread: -8 })).summary;
-  assert.equal(s.headline.title, "準備金仍高於3兆美元，後備資金池仍有緩衝");
+  assert.equal(s.headline.title, "準備金仍高於3兆美元，備用錢包仍有緩衝");
   assert.equal(s.rates.status, "below");
   assert.match(s.headline.lede, /借錢成本正常。$/);
 });

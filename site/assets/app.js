@@ -50,7 +50,7 @@ function renderHero(data) {
   const s = data.summary;
   const latest = [s.onrrp.date, s.netliq.date, s.rates.date].sort().at(-1);
   $("#asof").textContent = `數據更新至${fmtDate(latest)}`;
-  $("#where-sub").textContent = `講座的三條線。準備金及政府戶口為每週平均，最新至${fmtDate(s.reserves.date, { year: false })}。`;
+  $("#where-sub").textContent = `講座的三個錢包。準備金及TGA為每週平均，最新至${fmtDate(s.reserves.date, { year: false })}。`;
   // 按逗號分句，每句不拆開換行
   const parts = s.headline.title.split("，");
   $("#headline").innerHTML = parts.map((p, i) => `<span class="clause">${esc(p)}${i < parts.length - 1 ? "，" : ""}</span>`).join("");
@@ -65,26 +65,26 @@ function renderHero(data) {
     `<span class="chip ${v >= 0 ? "good" : "watch"}">${label} <b>${signed(v)}</b></span>`;
   $("#nl-chg").innerHTML = chg("近1週", n.chg_1w) + chg("近1個月", n.chg_1m);
   const u = (v) => `<b>${fmtUsd(v, { unit: false })}</b>`;
-  $("#formula").innerHTML = `聯準會總資產 ${u(n.walcl)}（${fmtDate(n.walcl_date, { year: false })}）− 政府戶口 ${u(n.tga)} − 後備資金池 ${u(n.rrp)}（${fmtDate(n.date, { year: false })}）＝ ${u(n.value)}美元`;
+  $("#formula").innerHTML = `聯準會總資產 ${u(n.walcl)}（${fmtDate(n.walcl_date, { year: false })}）− 政府的錢包 ${u(n.tga)} − 備用錢包 ${u(n.rrp)}（${fmtDate(n.date, { year: false })}）＝ ${u(n.value)}美元`;
 
   // 錢去了哪裡
   const val = (b) => splitUsd(b);
   const [rv, ru] = val(s.reserves.value), [tv, tu] = val(s.tga.value), [ov, ou] = val(s.onrrp.value);
   $("#kpis").innerHTML = [
     metric({
-      id: "reserves", color: "--s1", name: "準備金", sub: "銀行的錢", value: rv, unit: ru,
-      read: "銀行存在聯準會的錢；低於3兆要留意",
+      id: "reserves", color: "--s1", name: "市場的錢包", sub: "準備金", value: rv, unit: ru,
+      read: "銀行存在聯準會的錢，低於3兆要留意",
       foot: `較上週 <b>${signed(s.reserves.chg_w)}</b>`,
       chip: s.reserves.below_ref ? ["watch", "跌穿3兆"] : ["good", "高於3兆"],
     }),
     metric({
-      id: "tga", color: "--s2", name: "政府戶口", sub: "TGA", value: tv, unit: tu,
+      id: "tga", color: "--s2", name: "政府的錢包", sub: "TGA", value: tv, unit: tu,
       read: "上升＝政府從市場抽走錢",
       foot: `較上週 <b>${signed(s.tga.chg_w)}</b>`,
       chip: s.tga.chg_w > 0 ? ["watch", "上升中"] : ["good", "回落中"],
     }),
     metric({
-      id: "onrrp", color: "--s3", name: "後備資金池", sub: "ON RRP", value: ov, unit: ou,
+      id: "onrrp", color: "--s3", name: "備用錢包", sub: "ON RRP", value: ov, unit: ou,
       read: "越低＝市場緩衝越少",
       foot: `高峰 <b>${fmtUsd(s.onrrp.peak, { unit: false })}</b>（${fmtMonth(s.onrrp.peak_date)}）`,
       chip: s.onrrp.cushion_low ? ["watch", `只剩高峰${pctText(s.onrrp.pct_of_peak)}`] : ["good", `約為高峰${pctText(s.onrrp.pct_of_peak)}`],
@@ -417,17 +417,17 @@ function renderCharts(data) {
   }));
 
   charts.push(new Chart($("#chart-three"), {
-    aria: "準備金、政府戶口及後備資金池走勢，單位兆美元",
+    aria: "市場的錢包、政府的錢包及備用錢包走勢，單位兆美元",
     range: "全部", ranges: long,
     series: [
-      { label: "準備金", color: "--s1", rows: w.reserves },
-      { label: "政府戶口", color: "--s2", rows: w.tga },
-      { label: "後備資金池", color: "--s3", rows: d.onrrp },
+      { label: "市場的錢包", color: "--s1", rows: w.reserves },
+      { label: "政府的錢包", color: "--s2", rows: w.tga },
+      { label: "備用錢包", color: "--s3", rows: d.onrrp },
     ],
     refs: [{ y: 3000, label: "3兆參考線" }],
     marks: [
       { d: "2019-09-17", label: "2019年9月借錢風波", short: "2019年9月" },
-      { d: peak.peak_date, label: "後備資金池高峰", short: "高峰" },
+      { d: peak.peak_date, label: "備用錢包高峰", short: "高峰" },
     ],
     zero: true,
     yTick: tri,
@@ -472,16 +472,16 @@ function renderTables(data) {
   const tga = new Map(w.tga);
   const rows = w.reserves.slice(-8).reverse().map(([date, v]) =>
     `<tr><td>${fmtDate(date)}</td><td class="n">${u(v)}</td><td class="n">${u(tga.get(date))}</td><td class="n">${u(rrpAt(date))}</td></tr>`).join("");
-  $("#table-three").innerHTML = `<thead><tr><th>最近8週（週三）</th><th class="n">準備金（週平均）</th><th class="n">政府戶口（週平均）</th><th class="n">後備資金池（當日）</th></tr></thead><tbody>${rows}</tbody>`;
+  $("#table-three").innerHTML = `<thead><tr><th>最近8週（週三）</th><th class="n">市場的錢包（週平均）</th><th class="n">政府的錢包（週平均）</th><th class="n">備用錢包（當日）</th></tr></thead><tbody>${rows}</tbody>`;
 
   const fred = (id) => `<a href="https://fred.stlouisfed.org/series/${id}" target="_blank" rel="noopener">FRED ${id}</a>`;
   const dts = `<a href="https://fiscaldata.treasury.gov/datasets/daily-treasury-statement/" target="_blank" rel="noopener">財政部每日報表</a>`;
   const src = [
     ["市場上的錢（淨流動性）", "本站計算", "每日", s.netliq.date, fmtUsd(s.netliq.value)],
-    ["準備金", fred("WRESBAL"), "週平均", s.reserves.date, fmtUsd(s.reserves.value)],
-    ["政府戶口（週）", fred("WTREGEN"), "週平均", s.tga.date, fmtUsd(s.tga.value)],
-    ["政府戶口（日）", dts, "每日收市", s.netliq.date, fmtUsd(s.netliq.tga)],
-    ["後備資金池", fred("RRPONTSYD"), "每日", s.onrrp.date, fmtUsd(s.onrrp.value)],
+    ["市場的錢包（準備金）", fred("WRESBAL"), "週平均", s.reserves.date, fmtUsd(s.reserves.value)],
+    ["政府的錢包（TGA，週）", fred("WTREGEN"), "週平均", s.tga.date, fmtUsd(s.tga.value)],
+    ["政府的錢包（TGA，日）", dts, "每日收市", s.netliq.date, fmtUsd(s.netliq.tga)],
+    ["備用錢包（ON RRP）", fred("RRPONTSYD"), "每日", s.onrrp.date, fmtUsd(s.onrrp.value)],
     ["聯準會總資產", fred("WALCL"), "週三", s.netliq.walcl_date, fmtUsd(s.netliq.walcl)],
     ["SOFR", fred("SOFR"), "每日", s.rates.date, fmtPct(s.rates.sofr)],
     ["IORB", fred("IORB"), "每日", s.rates.date, fmtPct(s.rates.iorb)],

@@ -62,7 +62,7 @@ export function headline(s) {
   const title =
     (reserves.below_ref ? "準備金跌穿3兆美元" : "準備金仍高於3兆美元") +
     "，" +
-    (onrrp.cushion_low ? "後備資金池幾乎用完" : "後備資金池仍有緩衝");
+    (onrrp.cushion_low ? "備用錢包幾乎用完" : "備用錢包仍有緩衝");
   const calm = rates.status === "at" ? "借錢成本貼近警戒位，但暫未見持續壓力。" : "借錢成本正常。";
   return { title, lede: money + calm, pressure };
 }

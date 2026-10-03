@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>市場流動性｜每日觀察</title>
-<meta name="description" content="每日自動更新的市場流動性觀察：淨流動性、銀行準備金、政府戶口TGA、後備資金池ON RRP及借錢壓力。數據來自聯準會及美國財政部。屬情境觀察，不構成投資建議。">
+<meta name="description" content="每日自動更新的市場流動性觀察：淨流動性、市場的錢包（準備金）、政府的錢包（TGA）、備用錢包（ON RRP）及借錢壓力。數據來自聯準會及美國財政部。屬情境觀察，不構成投資建議。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="市場流動性｜每日觀察">
 <meta property="og:description" content="用官方數據看市場流動性：市場上的錢多了還是少了，每日自動更新。">
@@ -62,7 +62,7 @@
           <div class="more-body">
             <p class="formula" id="formula"></p>
             <p>撳「對比」可加入BTC、黃金、納指100、標普500、ETH或美元指數：每項資產在下方各佔一格、用自己的刻度，日期與淨流動性對齊；括號內為所選期間的升跌。走勢相似不代表因果關係；流動性轉向與資產反應之間常有時間差，幅度亦不固定，所以較適合看數月以上的大方向。</p>
-            <p>這是市場常用的方向指標，看升跌比看絕對數字有用；它不是會計恆等式，也不等於隨時可以買資產的現金。聯準會總資產每週三才更新，平日之間沿用最近一次數字；政府戶口用美國財政部每日報表。</p>
+            <p>這是市場常用的方向指標，看升跌比看絕對數字有用；它不是會計恆等式，也不等於隨時可以買資產的現金。聯準會總資產每週三才更新，平日之間沿用最近一次數字；政府的錢包（TGA）用美國財政部每日報表。</p>
           </div>
         </details>
       </article>
@@ -73,16 +73,16 @@
     <section class="block" id="where" data-od-id="where">
       <div class="block-head">
         <h2>錢去了哪裡</h2>
-        <p id="where-sub">講座的三條線：銀行的錢、政府戶口、後備資金池。</p>
+        <p id="where-sub">講座的三個錢包：市場的錢包、政府的錢包、備用錢包。</p>
       </div>
       <div class="metrics three" id="kpis"></div>
       <div class="chart" id="chart-three" data-od-id="chart-three"></div>
       <details class="more">
-        <summary>三個戶口是甚麼？</summary>
+        <summary>三個錢包是甚麼？</summary>
         <div class="more-body">
-          <p><b>準備金</b>：銀行存在聯準會的結算資金。它不是可以直接借給企業或散戶的錢，但太少時銀行之間借錢會變貴。</p>
-          <p><b>政府戶口（TGA）</b>：財政部在聯準會的戶口。政府收稅、發債時，錢由銀行流入這裡；政府花錢時，錢流回銀行。</p>
-          <p><b>後備資金池（ON RRP）</b>：貨幣市場基金等機構把閒錢隔夜存在聯準會。以前政府發債多數用這裡的錢，銀行的錢因而不受影響；現在它幾乎用完，政府收錢會較直接地抽走銀行的錢。</p>
+          <p><b>市場的錢包（準備金）</b>：銀行存在聯準會的結算資金。它不是可以直接借給企業或散戶的錢，但太少時銀行之間借錢會變貴。</p>
+          <p><b>政府的錢包（TGA）</b>：財政部在聯準會的戶口。政府收稅、發債時，錢由市場的錢包流入這裡，政府花錢時，錢流回市場。</p>
+          <p><b>備用錢包（ON RRP）</b>：貨幣市場基金等機構把閒錢隔夜存在聯準會。以前政府發債多數用這裡的錢，市場的錢包因而不受影響，現在它幾乎用完，政府收錢會較直接地從市場的錢包拿走。</p>
           <div class="table-wrap"><table id="table-three"></table></div>
         </div>
       </details>
@@ -140,8 +140,8 @@
         <summary>標籤怎樣判斷？</summary>
         <div class="more-body">
           <ul class="rules">
-            <li>準備金：週平均低於3兆美元，標示「跌穿3兆」。</li>
-            <li>後備資金池：低於1,000億美元，標示「幾乎用完」。</li>
+            <li>市場的錢包（準備金）：週平均低於3兆美元，標示「跌穿3兆」。</li>
+            <li>備用錢包（ON RRP）：低於1,000億美元，標示「幾乎用完」。</li>
             <li>借錢成本差距：取近5日平均。−3個基點或以下「正常」；−3至+2「貼近警戒位」；高於+2「借錢變貴」。</li>
             <li>緊急借錢：取近5日最高。少於10億美元「幾乎無人使用」；10億至100億「少量使用」；100億或以上「大量使用」。</li>
             <li>頁首結論句按以上規則自動生成，只描述現況。門檻由本站設定，並非官方標準，亦未經回測。</li>
@@ -151,7 +151,7 @@
       <details class="more">
         <summary>數據來源及更新時間</summary>
         <div class="more-body">
-          <p>聯準會數據來自聖路易斯聯儲FRED（H.4.1每週四美國時間下午公布，約香港時間週五清晨；H.15及紐約聯儲每日公布）；每日政府戶口來自美國財政部每日報表；對比用的BTC及ETH為Coinbase報價（經FRED），美元指數為聯準會廣義美元指數，黃金以PAXG代幣在Binance的報價代表（1枚對應1金衡盎司倫敦金，與現貨金價略有差距）。標普500及納指100經FRED取得，版權分別屬S&P Dow Jones Indices LLC及Nasdaq, Inc.，只作走勢對比。本頁每日約香港時間03:30、06:30及21:30自動抓取，另有後備排程。</p>
+          <p>聯準會數據來自聖路易斯聯儲FRED（H.4.1每週四美國時間下午公布，約香港時間週五清晨；H.15及紐約聯儲每日公布）；每日TGA來自美國財政部每日報表；對比用的BTC及ETH為Coinbase報價（經FRED），美元指數為聯準會廣義美元指數，黃金以PAXG代幣在Binance的報價代表（1枚對應1金衡盎司倫敦金，與現貨金價略有差距）。標普500及納指100經FRED取得，版權分別屬S&P Dow Jones Indices LLC及Nasdaq, Inc.，只作走勢對比。本頁每日約香港時間03:30、06:30及21:30自動抓取，另有後備排程。</p>
           <div class="table-wrap"><table class="sources" id="table-sources"></table></div>
           <p class="fine" id="checked-at"></p>
         </div>
