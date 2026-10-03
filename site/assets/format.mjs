@@ -3,9 +3,9 @@
 
 export const MINUS = "−";
 
-// 參考水位及描述門檻（本站自訂，不是官方標準；網頁「判讀規則」一節逐條列出）
+// 參考線及描述門檻（本站自訂，不是官方標準；網頁「判讀規則」一節逐條列出）
 export const RULES = {
-  reserveRef: 3000, // 準備金 3 兆美元參考水位
+  reserveRef: 3000, // 準備金 3 兆美元參考線
   onrrpLow: 100, // ON RRP 低於 1,000 億美元視為「氣墊接近用盡」
   spreadCalm: -3, // SOFR − IORB 近 5 個交易日平均 ≤ −3 個基點：資金暢順
   spreadStress: 2, // 平均 > +2 個基點：壓力浮現；兩者之間為「貼近 IORB」

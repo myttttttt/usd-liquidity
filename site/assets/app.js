@@ -1,4 +1,4 @@
-// 美元水管：讀取 data/liquidity.json，畫首屏結論、手寫 SVG 圖表及表格。
+// 市場流動性：讀取 data/liquidity.json，畫首屏結論、手寫 SVG 圖表及表格。
 // 沒有外部圖表庫；所有數字格式及結論規則來自 format.mjs（與數據腳本共用）。
 import { fmtUsd, fmtPct, fmtBp, fmtDate, RATE_STATUS, SRF_STATUS } from "./format.mjs";
 
@@ -424,7 +424,7 @@ function renderCharts(data) {
       { label: "政府戶口", color: "--s2", rows: w.tga },
       { label: "後備資金池", color: "--s3", rows: d.onrrp },
     ],
-    refs: [{ y: 3000, label: "3兆參考水位" }],
+    refs: [{ y: 3000, label: "3兆參考線" }],
     marks: [
       { d: "2019-09-17", label: "2019年9月借錢風波", short: "2019年9月" },
       { d: peak.peak_date, label: "後備資金池高峰", short: "高峰" },
