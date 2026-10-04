@@ -56,6 +56,17 @@ jobs:
             git commit -m "data: FRED update $(date -u +%Y-%m-%dT%H:%MZ)"
             git push
           fi
+      - name: Stamp asset versions
+        # 只改部署副本（不 commit）：CSS／JS 網址加內容雜湊，
+        # 改版後讀者不會出現新 HTML 配舊快取 CSS 的情況。
+        run: |
+          css=$(sha1sum site/assets/style.css | cut -c1-8)
+          js=$(cat site/assets/app.js site/assets/format.mjs | sha1sum | cut -c1-8)
+          sed -i "s#assets/style.css\"#assets/style.css?v=$css\"#; s#assets/app.js\"#assets/app.js?v=$js\"#" site/index.html
+          sed -i "s#from \"./format.mjs\"#from \"./format.mjs?v=$js\"#" site/assets/app.js
+          grep -q "style.css?v=$css" site/index.html
+          grep -q "app.js?v=$js" site/index.html
+          grep -q "format.mjs?v=$js" site/assets/app.js
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
