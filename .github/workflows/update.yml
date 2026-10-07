@@ -67,9 +67,20 @@ jobs:
           grep -q "style.css?v=$css" site/index.html
           grep -q "app.js?v=$js" site/index.html
           grep -q "format.mjs?v=$js" site/assets/app.js
+      - name: Redirect legacy homepage after RS acceptance
+        # Remains off until owner approves retirement and explicitly sets this non-secret variable.
+        # Disabling it and rerunning restores the original page; repo/data/updater are retained.
+        if: vars.RS_LIQUIDITY_REDIRECT == 'true'
+        run: node scripts/legacy-redirect.mjs
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v5
+      - name: Publish verified data for RS Terminal
+        # After Pages deploy: a publication failure must not stop the existing site update.
+        # Same contents:write permission and existing checkout authentication; no RS private Actions.
+        # Publish every successful fetch, even unchanged values, to preserve generated_at/stale flags.
+        # Separate branch is outside push.branches:[main], preventing recursive workflow runs.
+        run: node scripts/publish-rs-data.mjs
